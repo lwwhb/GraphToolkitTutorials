@@ -1,0 +1,19 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.BehaviorTree.Editor",
+    "rootNamespace": "GraphToolkitTutorials.BehaviorTree",
+    "references": [
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Tutorials.BehaviorTree.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

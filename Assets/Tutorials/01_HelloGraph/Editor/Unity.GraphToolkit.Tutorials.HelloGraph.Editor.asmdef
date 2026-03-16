@@ -1,0 +1,18 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.HelloGraph.Editor",
+    "rootNamespace": "GraphToolkitTutorials.HelloGraph",
+    "references": [
+        "Unity.GraphToolkit.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

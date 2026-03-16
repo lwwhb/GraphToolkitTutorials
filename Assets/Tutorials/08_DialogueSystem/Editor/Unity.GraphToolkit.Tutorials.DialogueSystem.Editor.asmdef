@@ -1,0 +1,19 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.DialogueSystem.Editor",
+    "rootNamespace": "GraphToolkitTutorials.DialogueSystem",
+    "references": [
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Tutorials.DialogueSystem.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

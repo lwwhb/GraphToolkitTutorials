@@ -1,0 +1,16 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.DialogueSystem.Runtime",
+    "rootNamespace": "GraphToolkitTutorials.DialogueSystem.Runtime",
+    "references": [
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

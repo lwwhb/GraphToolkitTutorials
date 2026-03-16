@@ -1,0 +1,17 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.RenderGraphBasics.Runtime",
+    "rootNamespace": "GraphToolkitTutorials.RenderGraphBasics.Runtime",
+    "references": [
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

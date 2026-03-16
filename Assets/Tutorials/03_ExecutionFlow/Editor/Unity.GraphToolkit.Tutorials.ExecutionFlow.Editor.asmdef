@@ -1,0 +1,19 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.ExecutionFlow.Editor",
+    "rootNamespace": "GraphToolkitTutorials.ExecutionFlow",
+    "references": [
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Tutorials.ExecutionFlow.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
