@@ -21,7 +21,7 @@ namespace GraphToolkitTutorials.ContextBlocks
         {
             get
             {
-                foreach (var node in Graph.Nodes)
+                foreach (var node in Graph.GetNodes())
                 {
                     if (node is FunctionContextNode context)
                     {

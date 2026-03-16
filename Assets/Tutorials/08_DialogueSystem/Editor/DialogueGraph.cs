@@ -15,7 +15,7 @@ namespace GraphToolkitTutorials.DialogueSystem
         /// </summary>
         public StartDialogueNode FindStartNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is StartDialogueNode startNode)
                 {

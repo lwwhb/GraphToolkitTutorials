@@ -51,7 +51,7 @@ namespace GraphToolkitTutorials.ContextBlocks
         public IReadOnlyList<BlockNode> GetBlocks()
         {
             var blocks = new List<BlockNode>();
-            foreach (var node in Graph.Nodes)
+            foreach (var node in Graph.GetNodes())
             {
                 if (node is BlockNode block && block.Context == this)
                 {

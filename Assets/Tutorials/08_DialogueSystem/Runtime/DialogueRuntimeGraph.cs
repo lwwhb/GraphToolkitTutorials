@@ -27,7 +27,7 @@ namespace GraphToolkitTutorials.DialogueSystem.Runtime
             nodes.Clear();
 
             // 转换所有节点
-            foreach (var editorNode in editorGraph.Nodes)
+            foreach (var editorNode in editorGraph.GetNodes())
             {
                 if (editorNode is DialogueNode dialogueNode)
                 {

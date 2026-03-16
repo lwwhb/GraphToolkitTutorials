@@ -24,7 +24,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
 
             // 获取下一个节点的索引
             var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? graph.Nodes.IndexOf(nextNode) : -1;
+            runtimeNode.nextNodeIndex = nextNode != null ? graph.GetNodes().IndexOf(nextNode) : -1;
 
             return runtimeNode;
         }

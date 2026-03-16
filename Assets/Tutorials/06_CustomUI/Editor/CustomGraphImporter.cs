@@ -26,7 +26,7 @@ namespace GraphToolkitTutorials.CustomUI
             var graphData = ScriptableObject.CreateInstance<CustomGraphData>();
             graphData.name = Path.GetFileNameWithoutExtension(ctx.assetPath);
             graphData.graph = graph;
-            graphData.nodeCount = graph.Nodes.Count;
+            graphData.nodeCount = graph.GetNodes().Count;
             graphData.connectionCount = graph.Connections.Count;
 
             // 添加到资产

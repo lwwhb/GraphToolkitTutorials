@@ -15,7 +15,7 @@ namespace GraphToolkitTutorials.BehaviorTree
         /// </summary>
         public RootNode FindRootNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is RootNode rootNode)
                 {

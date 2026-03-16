@@ -35,7 +35,7 @@ namespace GraphToolkitTutorials.RenderGraphAPI
         /// </summary>
         public int GetNodeIndex(NewRenderGraph graph)
         {
-            return graph.Nodes.IndexOf(this);
+            return graph.GetNodes().IndexOf(this);
         }
 
         /// <summary>

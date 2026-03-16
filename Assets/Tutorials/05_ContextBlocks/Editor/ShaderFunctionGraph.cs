@@ -18,7 +18,7 @@ namespace GraphToolkitTutorials.ContextBlocks
             if (port == null || port.Direction != PortDirection.Output)
                 return 0f;
 
-            var node = port.Node;
+            var node = FindNodeForPort(port);
             if (node is IFloatNode floatNode)
             {
                 return floatNode.EvaluateFloat(port, this);
@@ -35,7 +35,7 @@ namespace GraphToolkitTutorials.ContextBlocks
             if (port == null || port.Direction != PortDirection.Output)
                 return Vector3.zero;
 
-            var node = port.Node;
+            var node = FindNodeForPort(port);
             if (node is IVectorNode vectorNode)
             {
                 return vectorNode.EvaluateVector(port, this);
@@ -52,13 +52,7 @@ namespace GraphToolkitTutorials.ContextBlocks
             if (inputPort == null || inputPort.Direction != PortDirection.Input)
                 return null;
 
-            foreach (var connection in Connections)
-            {
-                if (connection.InputPort == inputPort)
-                    return connection.OutputPort;
-            }
-
-            return null;
+            return inputPort.FirstConnectedPort;
         }
 
         /// <summary>
@@ -66,12 +60,25 @@ namespace GraphToolkitTutorials.ContextBlocks
         /// </summary>
         public FunctionContextNode FindFunctionContext()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is FunctionContextNode contextNode)
                 {
                     return contextNode;
                 }
+            }
+            return null;
+        }
+
+        private INode FindNodeForPort(IPort port)
+        {
+            if (port == null) return null;
+            foreach (var node in GetNodes())
+            {
+                foreach (var p in node.GetInputPorts())
+                    if (p == port) return node;
+                foreach (var p in node.GetOutputPorts())
+                    if (p == port) return node;
             }
             return null;
         }

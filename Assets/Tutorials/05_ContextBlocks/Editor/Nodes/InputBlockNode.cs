@@ -19,7 +19,7 @@ namespace GraphToolkitTutorials.ContextBlocks
             get
             {
                 // BlockNode必须有一个父ContextNode
-                foreach (var node in Graph.Nodes)
+                foreach (var node in Graph.GetNodes())
                 {
                     if (node is FunctionContextNode context)
                     {

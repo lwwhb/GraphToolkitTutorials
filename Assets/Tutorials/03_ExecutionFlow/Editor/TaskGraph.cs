@@ -16,7 +16,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
         /// </summary>
         public StartNode FindStartNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is StartNode startNode)
                 {

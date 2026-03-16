@@ -11,6 +11,23 @@ namespace GraphToolkitTutorials.HelloGraph
     internal class CalculatorGraph : Graph
     {
         /// <summary>
+        /// 查找拥有指定端口的节点
+        /// </summary>
+        private INode FindNodeForPort(IPort port)
+        {
+            if (port == null) return null;
+
+            foreach (var node in GetNodes())
+            {
+                foreach (var p in node.GetInputPorts())
+                    if (p == port) return node;
+                foreach (var p in node.GetOutputPorts())
+                    if (p == port) return node;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// 评估指定输出端口的值
         /// 这是数据流图形的核心方法，通过递归评估连接的节点来计算结果
         /// </summary>
@@ -19,7 +36,7 @@ namespace GraphToolkitTutorials.HelloGraph
             if (port == null || port.Direction != PortDirection.Output)
                 return 0f;
 
-            var node = port.Node;
+            var node = FindNodeForPort(port);
             if (node is ICalculatorNode calcNode)
             {
                 return calcNode.Evaluate(port, this);
@@ -36,13 +53,7 @@ namespace GraphToolkitTutorials.HelloGraph
             if (outputPort == null || outputPort.Direction != PortDirection.Output)
                 return null;
 
-            foreach (var connection in Connections)
-            {
-                if (connection.OutputPort == outputPort)
-                    return connection.InputPort;
-            }
-
-            return null;
+            return outputPort.FirstConnectedPort;
         }
 
         /// <summary>
@@ -53,13 +64,7 @@ namespace GraphToolkitTutorials.HelloGraph
             if (inputPort == null || inputPort.Direction != PortDirection.Input)
                 return null;
 
-            foreach (var connection in Connections)
-            {
-                if (connection.InputPort == inputPort)
-                    return connection.OutputPort;
-            }
-
-            return null;
+            return inputPort.FirstConnectedPort;
         }
     }
 }

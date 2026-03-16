@@ -33,13 +33,13 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
                 // 为子图的输入变量创建输入端口
                 foreach (var variable in m_Subgraph.Variables)
                 {
-                    if (variable.Kind == VariableKind.Input)
+                    if (variable.VariableKind == VariableKind.Input)
                     {
-                        if (variable.Type == typeof(Color))
+                        if (variable.DataType == typeof(Color))
                         {
                             context.AddInputPort<Color>(variable.Name).Build();
                         }
-                        else if (variable.Type == typeof(float))
+                        else if (variable.DataType == typeof(float))
                         {
                             context.AddInputPort<float>(variable.Name).Build();
                         }
@@ -49,13 +49,13 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
                 // 为子图的输出变量创建输出端口
                 foreach (var variable in m_Subgraph.Variables)
                 {
-                    if (variable.Kind == VariableKind.Output)
+                    if (variable.VariableKind == VariableKind.Output)
                     {
-                        if (variable.Type == typeof(Color))
+                        if (variable.DataType == typeof(Color))
                         {
                             context.AddOutputPort<Color>(variable.Name).Build();
                         }
-                        else if (variable.Type == typeof(float))
+                        else if (variable.DataType == typeof(float))
                         {
                             context.AddOutputPort<float>(variable.Name).Build();
                         }
@@ -89,13 +89,13 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
                         var variable = FindSubgraphVariable(inputPort.Name, VariableKind.Input);
                         if (variable != null)
                         {
-                            if (variable.Type == typeof(Color))
+                            if (variable.DataType == typeof(Color))
                             {
-                                variable.Value = graph.EvaluateColorPort(connectedPort);
+                                variable.TrySetDefaultValue(graph.EvaluateColorPort(connectedPort));
                             }
-                            else if (variable.Type == typeof(float))
+                            else if (variable.DataType == typeof(float))
                             {
-                                variable.Value = graph.EvaluateFloatPort(connectedPort);
+                                variable.TrySetDefaultValue(graph.EvaluateFloatPort(connectedPort));
                             }
                         }
                     }
@@ -112,9 +112,9 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
                 if (port != null)
                 {
                     var variable = FindSubgraphVariable(port.Name, VariableKind.Output);
-                    if (variable != null && variable.Type == typeof(Color))
+                    if (variable != null && variable.DataType == typeof(Color))
                     {
-                        variable.Value = result;
+                        variable.TrySetDefaultValue(result);
                     }
                 }
 
@@ -134,7 +134,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
 
             foreach (var variable in m_Subgraph.Variables)
             {
-                if (variable.Name == name && variable.Kind == kind)
+                if (variable.Name == name && variable.VariableKind == kind)
                 {
                     return variable;
                 }

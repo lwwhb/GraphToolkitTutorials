@@ -34,7 +34,7 @@ namespace GraphToolkitTutorials.BehaviorTree
         /// </summary>
         public int GetNodeIndex(BehaviorTreeGraph graph)
         {
-            return graph.Nodes.IndexOf(this);
+            return graph.GetNodes().IndexOf(this);
         }
     }
 

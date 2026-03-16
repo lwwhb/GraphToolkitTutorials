@@ -44,7 +44,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
             var truePort = graph.GetConnectedInputPort(m_TrueOut);
             if (truePort != null && truePort.Node is TaskNode trueNode)
             {
-                runtimeNode.trueNodeIndex = graph.Nodes.IndexOf(trueNode);
+                runtimeNode.trueNodeIndex = graph.GetNodes().IndexOf(trueNode);
             }
             else
             {
@@ -55,7 +55,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
             var falsePort = graph.GetConnectedInputPort(m_FalseOut);
             if (falsePort != null && falsePort.Node is TaskNode falseNode)
             {
-                runtimeNode.falseNodeIndex = graph.Nodes.IndexOf(falseNode);
+                runtimeNode.falseNodeIndex = graph.GetNodes().IndexOf(falseNode);
             }
             else
             {

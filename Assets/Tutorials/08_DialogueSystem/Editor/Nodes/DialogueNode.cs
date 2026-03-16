@@ -34,7 +34,7 @@ namespace GraphToolkitTutorials.DialogueSystem
         /// </summary>
         public int GetNodeIndex(DialogueGraph graph)
         {
-            return graph.Nodes.IndexOf(this);
+            return graph.GetNodes().IndexOf(this);
         }
     }
 }

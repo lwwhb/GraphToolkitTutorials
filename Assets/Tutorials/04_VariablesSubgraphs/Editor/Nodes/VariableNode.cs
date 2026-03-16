@@ -27,7 +27,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
                 if (Graph == null || string.IsNullOrEmpty(m_VariableGuid))
                     return null;
 
-                foreach (var variable in Graph.Variables)
+                foreach (var variable in Graph.GetVariables())
                 {
                     if (variable.Guid == m_VariableGuid)
                         return variable;
@@ -52,24 +52,24 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             }
 
             // 根据变量类型创建端口
-            if (variable.Type == typeof(Color))
+            if (variable.DataType == typeof(Color))
             {
-                if (variable.Kind == VariableKind.Input || variable.Kind == VariableKind.Local)
+                if (variable.VariableKind == VariableKind.Input || variable.VariableKind == VariableKind.Local)
                 {
                     m_ValueInput = context.AddInputPort<Color>("Value").Build();
                 }
-                if (variable.Kind == VariableKind.Output || variable.Kind == VariableKind.Local)
+                if (variable.VariableKind == VariableKind.Output || variable.VariableKind == VariableKind.Local)
                 {
                     m_ValueOutput = context.AddOutputPort<Color>("Value").Build();
                 }
             }
-            else if (variable.Type == typeof(float))
+            else if (variable.DataType == typeof(float))
             {
-                if (variable.Kind == VariableKind.Input || variable.Kind == VariableKind.Local)
+                if (variable.VariableKind == VariableKind.Input || variable.VariableKind == VariableKind.Local)
                 {
                     m_ValueInput = context.AddInputPort<float>("Value").Build();
                 }
-                if (variable.Kind == VariableKind.Output || variable.Kind == VariableKind.Local)
+                if (variable.VariableKind == VariableKind.Output || variable.VariableKind == VariableKind.Local)
                 {
                     m_ValueOutput = context.AddOutputPort<float>("Value").Build();
                 }
@@ -79,17 +79,17 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
         public Color EvaluateColor(IPort port, MaterialGraph graph)
         {
             var variable = Variable;
-            if (variable == null || variable.Type != typeof(Color))
+            if (variable == null || variable.DataType != typeof(Color))
                 return Color.white;
 
             // 如果是输入变量或局部变量，先评估输入端口
-            if ((variable.Kind == VariableKind.Input || variable.Kind == VariableKind.Local) && m_ValueInput != null)
+            if ((variable.VariableKind == VariableKind.Input || variable.VariableKind == VariableKind.Local) && m_ValueInput != null)
             {
                 var connectedPort = graph.GetConnectedOutputPort(m_ValueInput);
                 if (connectedPort != null)
                 {
                     var color = graph.EvaluateColorPort(connectedPort);
-                    variable.Value = color;
+                    variable.TrySetDefaultValue(color);
                     return color;
                 }
             }
@@ -106,17 +106,17 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
         public float EvaluateFloat(IPort port, MaterialGraph graph)
         {
             var variable = Variable;
-            if (variable == null || variable.Type != typeof(float))
+            if (variable == null || variable.DataType != typeof(float))
                 return 0f;
 
             // 如果是输入变量或局部变量，先评估输入端口
-            if ((variable.Kind == VariableKind.Input || variable.Kind == VariableKind.Local) && m_ValueInput != null)
+            if ((variable.VariableKind == VariableKind.Input || variable.VariableKind == VariableKind.Local) && m_ValueInput != null)
             {
                 var connectedPort = graph.GetConnectedOutputPort(m_ValueInput);
                 if (connectedPort != null)
                 {
                     var value = graph.EvaluateFloatPort(connectedPort);
-                    variable.Value = value;
+                    variable.TrySetDefaultValue(value);
                     return value;
                 }
             }
@@ -136,8 +136,8 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             if (variable != null)
             {
                 context.AddOption("Variable", () => variable.Name, null).Build();
-                context.AddOption("Type", () => variable.Type.Name, null).Build();
-                context.AddOption("Kind", () => variable.Kind.ToString(), null).Build();
+                context.AddOption("Type", () => variable.DataType.Name, null).Build();
+                context.AddOption("Kind", () => variable.VariableKind.ToString(), null).Build();
             }
         }
     }

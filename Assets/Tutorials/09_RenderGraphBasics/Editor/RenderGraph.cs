@@ -15,7 +15,7 @@ namespace GraphToolkitTutorials.RenderGraphBasics
         /// </summary>
         public CameraNode FindCameraNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is CameraNode cameraNode)
                 {

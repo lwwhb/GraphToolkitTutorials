@@ -56,7 +56,7 @@ namespace GraphToolkitTutorials.GraphDrivenURP
         /// </summary>
         public int GetNodeIndex(URPGraph graph)
         {
-            return graph.Nodes.IndexOf(this);
+            return graph.GetNodes().IndexOf(this);
         }
     }
 }

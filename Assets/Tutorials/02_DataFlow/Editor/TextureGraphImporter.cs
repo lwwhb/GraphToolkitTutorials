@@ -27,7 +27,7 @@ namespace GraphToolkitTutorials.DataFlow
             Texture2D resultTexture = null;
             OutputNode outputNode = null;
 
-            foreach (var node in graph.Nodes)
+            foreach (var node in graph.GetNodes())
             {
                 if (node is OutputNode output)
                 {

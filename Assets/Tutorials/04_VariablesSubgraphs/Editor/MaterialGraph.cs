@@ -18,7 +18,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             if (port == null || port.Direction != PortDirection.Output)
                 return Color.white;
 
-            var node = port.Node;
+            var node = FindNodeForPort(port);
             if (node is IColorNode colorNode)
             {
                 return colorNode.EvaluateColor(port, this);
@@ -35,7 +35,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             if (port == null || port.Direction != PortDirection.Output)
                 return 0f;
 
-            var node = port.Node;
+            var node = FindNodeForPort(port);
             if (node is IFloatNode floatNode)
             {
                 return floatNode.EvaluateFloat(port, this);
@@ -52,13 +52,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             if (inputPort == null || inputPort.Direction != PortDirection.Input)
                 return null;
 
-            foreach (var connection in Connections)
-            {
-                if (connection.InputPort == inputPort)
-                    return connection.OutputPort;
-            }
-
-            return null;
+            return inputPort.FirstConnectedPort;
         }
 
         /// <summary>
@@ -66,7 +60,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
         /// </summary>
         public MaterialOutputNode FindOutputNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is MaterialOutputNode outputNode)
                 {
@@ -94,6 +88,19 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             materialData.smoothness = outputNode.GetSmoothness();
 
             return materialData;
+        }
+
+        private INode FindNodeForPort(IPort port)
+        {
+            if (port == null) return null;
+            foreach (var node in GetNodes())
+            {
+                foreach (var p in node.GetInputPorts())
+                    if (p == port) return node;
+                foreach (var p in node.GetOutputPorts())
+                    if (p == port) return node;
+            }
+            return null;
         }
     }
 

@@ -27,7 +27,7 @@ namespace GraphToolkitTutorials.HelloGraph
             float result = 0f;
             OutputNode outputNode = null;
 
-            foreach (var node in graph.Nodes)
+            foreach (var node in graph.GetNodes())
             {
                 if (node is OutputNode output)
                 {

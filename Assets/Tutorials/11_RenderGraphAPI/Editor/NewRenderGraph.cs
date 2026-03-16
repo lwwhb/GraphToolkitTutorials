@@ -17,7 +17,7 @@ namespace GraphToolkitTutorials.RenderGraphAPI
             var runtime = new Runtime.NewRenderGraphRuntime();
 
             // 收集所有渲染节点
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is RenderGraphNode renderNode)
                 {
@@ -26,7 +26,7 @@ namespace GraphToolkitTutorials.RenderGraphAPI
             }
 
             // 找到起始节点
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is PipelineStartNode startNode)
                 {

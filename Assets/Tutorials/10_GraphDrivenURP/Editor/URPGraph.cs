@@ -15,7 +15,7 @@ namespace GraphToolkitTutorials.GraphDrivenURP
         /// </summary>
         public PipelineStartNode FindStartNode()
         {
-            foreach (var node in Nodes)
+            foreach (var node in GetNodes())
             {
                 if (node is PipelineStartNode startNode)
                 {
