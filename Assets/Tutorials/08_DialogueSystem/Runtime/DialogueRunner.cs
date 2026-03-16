@@ -129,11 +129,11 @@ namespace GraphToolkitTutorials.DialogueSystem.Runtime
 
                 if (node is DialogueTextNode dialogueNode)
                 {
-                    nextNodeIndex = yield return ExecuteDialogueText(dialogueNode);
+        }
                 }
                 else if (node is ChoiceNode choiceNode)
                 {
-                    nextNodeIndex = yield return ExecuteChoice(choiceNode);
+        }
                 }
                 else if (node is BranchNode branchNode)
                 {

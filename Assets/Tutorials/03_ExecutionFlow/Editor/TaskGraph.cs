@@ -64,11 +64,4 @@ namespace GraphToolkitTutorials.ExecutionFlow
         /// 创建运行时图形
         /// 将编辑器图形转换为可序列化的运行时图形
         /// </summary>
-        public TaskRuntimeGraph CreateRuntimeGraph()
-        {
-            var runtimeGraph = ScriptableObject.CreateInstance<TaskRuntimeGraph>();
-            runtimeGraph.BuildFromEditorGraph(this);
-            return runtimeGraph;
-        }
-    }
 }

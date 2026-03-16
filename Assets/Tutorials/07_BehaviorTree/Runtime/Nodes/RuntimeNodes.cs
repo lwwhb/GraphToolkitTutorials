@@ -25,7 +25,13 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     [Serializable]
     public class ParallelNode : CompositeRuntimeNode
     {
-        public Editor.ParallelNode.SuccessPolicy successPolicy;
+        public enum SuccessPolicy
+        {
+            RequireAll,
+            RequireOne
+        }
+
+        public SuccessPolicy successPolicy;
     }
 
     /// <summary>
