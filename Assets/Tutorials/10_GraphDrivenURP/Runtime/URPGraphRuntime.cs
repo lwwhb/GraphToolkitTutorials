@@ -19,7 +19,11 @@ namespace GraphToolkitTutorials.GraphDrivenURP.Runtime
         /// </summary>
         public int startNodeIndex = -1;
 
-        /// <summary>
-        /// 从编辑器图形构建运行时URP图形
-        /// </summary>
+        public URPRuntimeNode GetNode(int index)
+        {
+            if (index >= 0 && index < nodes.Count)
+                return nodes[index];
+            return null;
+        }
+    }
 }

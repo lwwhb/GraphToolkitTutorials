@@ -59,9 +59,5 @@ namespace GraphToolkitTutorials.ExecutionFlow
 
             return null;
         }
-
-        /// <summary>
-        /// 创建运行时图形
-        /// 将编辑器图形转换为可序列化的运行时图形
-        /// </summary>
+    }
 }
