@@ -2,6 +2,7 @@
     "name": "Unity.GraphToolkit.Tutorials.RenderGraphBasics.Runtime",
     "rootNamespace": "GraphToolkitTutorials.RenderGraphBasics.Runtime",
     "references": [
+        "Unity.GraphToolkit.Tutorials.RenderGraphBasics.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],

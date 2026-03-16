@@ -95,19 +95,5 @@ namespace GraphToolkitTutorials.ContextBlocks
         {
             context.AddOption("Function Name", () => m_FunctionName, v => m_FunctionName = v).Build();
         }
-
-        /// <summary>
-        /// 验证函数必须有输出块
-        /// </summary>
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-
-            var outputBlock = FindOutputBlock();
-            if (outputBlock == null)
-            {
-                Debug.LogWarning($"Function '{m_FunctionName}' has no output block");
-            }
-        }
     }
 }

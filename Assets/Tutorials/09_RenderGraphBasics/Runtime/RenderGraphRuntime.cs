@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GraphToolkitTutorials.RenderGraphBasics;
 
 namespace GraphToolkitTutorials.RenderGraphBasics.Runtime
 {

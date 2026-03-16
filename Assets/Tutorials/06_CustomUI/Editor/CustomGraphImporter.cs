@@ -43,9 +43,9 @@ namespace GraphToolkitTutorials.CustomUI
     /// <summary>
     /// 自定义图形数据
     /// </summary>
+    [System.Serializable]
     public class CustomGraphData : ScriptableObject
     {
-        public CustomGraph graph;
         public int nodeCount;
         public int connectionCount;
     }

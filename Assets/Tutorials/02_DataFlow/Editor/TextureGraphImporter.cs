@@ -54,9 +54,6 @@ namespace GraphToolkitTutorials.DataFlow
             ctx.AddObjectToAsset("texture", resultTexture);
             ctx.SetMainObject(resultTexture);
 
-            // 添加图形本身作为子资产
-            ctx.AddObjectToAsset("graph", graph);
-
             Debug.Log($"Texture graph evaluated: {resultTexture.width}x{resultTexture.height}");
         }
     }

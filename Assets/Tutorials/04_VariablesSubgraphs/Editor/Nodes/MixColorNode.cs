@@ -12,7 +12,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
     internal class MixColorNode : Node, IColorNode
     {
         [SerializeField]
-        private float m_Factor = 0.5f;
+        private float m_FactorValue = 0.5f;
 
         private IPort m_ColorA;
         private IPort m_ColorB;
@@ -58,7 +58,7 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             {
                 return graph.EvaluateFloatPort(connectedPort);
             }
-            return m_Factor;
+            return m_FactorValue;
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)

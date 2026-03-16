@@ -19,8 +19,7 @@ namespace GraphToolkitTutorials.DataFlow
             if (port == null || port.Direction != PortDirection.Output)
                 return null;
 
-            var node = port.Node;
-            if (node is ITextureNode textureNode)
+            if (port.Node is ITextureNode textureNode)
             {
                 return textureNode.EvaluateTexture(port, this);
             }
@@ -36,8 +35,7 @@ namespace GraphToolkitTutorials.DataFlow
             if (port == null || port.Direction != PortDirection.Output)
                 return Color.white;
 
-            var node = port.Node;
-            if (node is IColorNode colorNode)
+            if (port.Node is IColorNode colorNode)
             {
                 return colorNode.EvaluateColor(port, this);
             }
@@ -53,8 +51,7 @@ namespace GraphToolkitTutorials.DataFlow
             if (port == null || port.Direction != PortDirection.Output)
                 return 0f;
 
-            var node = port.Node;
-            if (node is IFloatNode floatNode)
+            if (port.Node is IFloatNode floatNode)
             {
                 return floatNode.EvaluateFloat(port, this);
             }

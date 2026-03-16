@@ -58,9 +58,9 @@ namespace GraphToolkitTutorials.HelloGraph
     /// 计算器结果资产
     /// 存储图形评估的结果
     /// </summary>
+    [System.Serializable]
     public class CalculatorResult : ScriptableObject
     {
         public float result;
-        public CalculatorGraph graphAsset;
     }
 }

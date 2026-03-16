@@ -7,9 +7,7 @@ namespace GraphToolkitTutorials.CustomUI
     /// 样式化节点 - 演示自定义节点外观
     /// 这个节点展示如何通过NodeAttribute自定义节点的显示
     /// </summary>
-    [Node("Styled Node", "Custom",
-        Description = "A node with custom styling",
-        Color = "#FF6B6B")]
+    [Node("Styled Node", "Custom")]
     [UseWithGraph(typeof(CustomGraph))]
     internal class StyledNode : Node, IFloatNode
     {

@@ -218,38 +218,3 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
         }
     }
 }
-  }
-
-        /// <summary>
-        /// 获取黑板
-        /// </summary>
-        public Blackboard GetBlackboard()
-        {
-            return m_Blackboard;
-        }
-
-        /// <summary>
-        /// 是否正在运行
-        /// </summary>
-        public bool IsRunning()
-        {
-            return m_IsRunning;
-        }
-
-        /// <summary>
-        /// 设置黑板值（便捷方法）
-        /// </summary>
-        public void SetBlackboardValue<T>(string key, T value)
-        {
-            m_Blackboard.SetValue(key, value);
-        }
-
-        /// <summary>
-        /// 获取黑板值（便捷方法）
-        /// </summary>
-        public T GetBlackboardValue<T>(string key, T defaultValue = default)
-        {
-            return m_Blackboard.GetValue(key, defaultValue);
-        }
-    }
-}

@@ -15,14 +15,27 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
 
         private IPort m_Output;
 
-        public object Value
+        public System.Type DataType => typeof(Color);
+
+        public bool TryGetValue<T>(out T value)
         {
-            get => m_Value;
-            set
+            if (typeof(T) == typeof(Color))
             {
-                if (value is Color color)
-                    m_Value = color;
+                value = (T)(object)m_Value;
+                return true;
             }
+            value = default;
+            return false;
+        }
+
+        public bool TrySetValue<T>(T value)
+        {
+            if (value is Color color)
+            {
+                m_Value = color;
+                return true;
+            }
+            return false;
         }
 
         protected override void OnDefinePorts(IPortDefinitionContext context)

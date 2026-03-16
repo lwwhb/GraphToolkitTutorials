@@ -7,7 +7,7 @@ namespace GraphToolkitTutorials.CustomUI
     /// 预览节点 - 演示在节点上显示预览
     /// 展示如何在节点内嵌入自定义UI元素
     /// </summary>
-    [Node("Preview Node", "Custom", Color = "#4ECDC4")]
+    [Node("Preview Node", "Custom")]
     [UseWithGraph(typeof(CustomGraph))]
     internal class PreviewNode : Node, IColorNode
     {

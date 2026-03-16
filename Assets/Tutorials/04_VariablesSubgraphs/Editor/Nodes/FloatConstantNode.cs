@@ -15,14 +15,27 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
 
         private IPort m_Output;
 
-        public object Value
+        public System.Type DataType => typeof(float);
+
+        public bool TryGetValue<T>(out T value)
         {
-            get => m_Value;
-            set
+            if (typeof(T) == typeof(float))
             {
-                if (value is float floatValue)
-                    m_Value = floatValue;
+                value = (T)(object)m_Value;
+                return true;
             }
+            value = default;
+            return false;
+        }
+
+        public bool TrySetValue<T>(T value)
+        {
+            if (value is float floatValue)
+            {
+                m_Value = floatValue;
+                return true;
+            }
+            return false;
         }
 
         protected override void OnDefinePorts(IPortDefinitionContext context)

@@ -62,9 +62,9 @@ namespace GraphToolkitTutorials.ContextBlocks
     /// 着色器函数数据
     /// 存储函数图形的信息
     /// </summary>
+    [System.Serializable]
     public class ShaderFunctionData : ScriptableObject
     {
-        public ShaderFunctionGraph graph;
         public string functionName;
         public int blockCount;
     }

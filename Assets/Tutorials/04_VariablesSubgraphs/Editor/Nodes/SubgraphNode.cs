@@ -154,16 +154,6 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
             ).Build();
         }
 
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-
-            // 验证子图不能引用自己（避免循环引用）
-            if (m_Subgraph == Graph)
-            {
-                Debug.LogError($"SubgraphNode '{Name}': Cannot reference self as subgraph!");
-                m_Subgraph = null;
-            }
-        }
+        public Graph GetSubgraph() => m_Subgraph;
     }
 }
