@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -6,7 +7,8 @@ namespace GraphToolkitTutorials.HelloGraph
     /// <summary>
     /// 减法节点 - 计算两个输入值的差
     /// </summary>
-    [Node("Subtract", "Calculator")]
+    [Node("Calculator", "Assets/Tutorials/01_HelloGraph/Editor/Icons/subtract.png")]
+    [Serializable]
     internal class SubtractNode : Node, ICalculatorNode
     {
         private IPort m_InputA;
@@ -38,7 +40,8 @@ namespace GraphToolkitTutorials.HelloGraph
             {
                 return graph.EvaluatePort(connectedPort);
             }
-            return 0f;
+            inputPort.TryGetValue(out float value);
+            return value;
         }
     }
 }

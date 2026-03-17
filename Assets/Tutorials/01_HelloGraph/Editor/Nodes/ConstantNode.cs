@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,12 +8,11 @@ namespace GraphToolkitTutorials.HelloGraph
     /// 常量节点 - 输出一个固定的浮点数值
     /// 这是最简单的节点类型，不依赖任何输入
     /// </summary>
-    [Node("Constant", "Calculator")]
+    [Node("Calculator", "Assets/Tutorials/01_HelloGraph/Editor/Icons/constant.png")]
+    [Serializable]
     internal class ConstantNode : Node, ICalculatorNode
     {
-        [SerializeField]
-        private float m_Value = 0f;
-
+        private INodeOption m_Value;
         /// <summary>
         /// 定义节点的端口
         /// 常量节点只有一个输出端口
@@ -28,7 +28,12 @@ namespace GraphToolkitTutorials.HelloGraph
         /// </summary>
         public float Evaluate(IPort port, CalculatorGraph graph)
         {
-            return m_Value;
+            if (m_Value != null)
+            {
+                m_Value.TryGetValue(out float value);
+                return value;
+            }
+            return 0f;
         }
 
         /// <summary>
@@ -36,7 +41,7 @@ namespace GraphToolkitTutorials.HelloGraph
         /// </summary>
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Value", () => m_Value, v => m_Value = v).Build();
+            m_Value = context.AddOption<float>("Value").Build();
         }
     }
 }

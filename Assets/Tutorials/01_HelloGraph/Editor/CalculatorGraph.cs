@@ -1,4 +1,6 @@
+using System;
 using Unity.GraphToolkit.Editor;
+using UnityEditor;
 using UnityEngine;
 
 namespace GraphToolkitTutorials.HelloGraph
@@ -7,9 +9,19 @@ namespace GraphToolkitTutorials.HelloGraph
     /// 计算器图形 - GraphToolkit入门示例
     /// 演示如何创建自定义图形类型
     /// </summary>
-    [Graph("calc", GraphOptions.None)]
-    internal class CalculatorGraph : Graph
+    [Graph("calc", GraphOptions.Default)]
+    [Serializable]
+    public class CalculatorGraph : Graph
     {
+        [MenuItem("Assets/Create/Graph Toolkit/CalculatorGraph", false)]
+        /// <summary>
+        /// 创建计算器图资源
+        /// </summary>
+        static void CreateGraphAssetFile()
+        {
+            GraphDatabase.PromptInProjectBrowserToCreateNewAsset<CalculatorGraph>();
+        }
+        
         /// <summary>
         /// 查找拥有指定端口的节点
         /// </summary>

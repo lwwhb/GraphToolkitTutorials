@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -6,7 +7,8 @@ namespace GraphToolkitTutorials.HelloGraph
     /// <summary>
     /// 乘法节点 - 计算两个输入值的乘积
     /// </summary>
-    [Node("Multiply", "Calculator")]
+    [Node("Calculator", "Assets/Tutorials/01_HelloGraph/Editor/Icons/multiply.png")]
+    [Serializable]
     internal class MultiplyNode : Node, ICalculatorNode
     {
         private IPort m_InputA;
@@ -44,7 +46,8 @@ namespace GraphToolkitTutorials.HelloGraph
             {
                 return graph.EvaluatePort(connectedPort);
             }
-            return 0f;
+            inputPort.TryGetValue(out float value);
+            return value;
         }
     }
 }

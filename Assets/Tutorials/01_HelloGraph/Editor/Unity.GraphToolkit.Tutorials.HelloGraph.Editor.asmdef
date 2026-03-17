@@ -2,7 +2,8 @@
     "name": "Unity.GraphToolkit.Tutorials.HelloGraph.Editor",
     "rootNamespace": "GraphToolkitTutorials.HelloGraph",
     "references": [
-        "Unity.GraphToolkit.Editor"
+        "Unity.GraphToolkit.Editor",
+	"Unity.GraphToolkit.Common.Editor"
     ],
     "includePlatforms": [
         "Editor"

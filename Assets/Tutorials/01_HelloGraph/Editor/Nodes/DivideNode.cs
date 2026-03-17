@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ namespace GraphToolkitTutorials.HelloGraph
     /// 除法节点 - 计算两个输入值的商
     /// 包含除零保护
     /// </summary>
-    [Node("Divide", "Calculator")]
+    [Node("Calculator", "Assets/Tutorials/01_HelloGraph/Editor/Icons/divide.png")]
+    [Serializable]
     internal class DivideNode : Node, ICalculatorNode
     {
         private IPort m_InputA;
@@ -32,7 +34,7 @@ namespace GraphToolkitTutorials.HelloGraph
             // 除零保护
             if (Mathf.Approximately(b, 0f))
             {
-                Debug.LogWarning($"Division by zero in node {Name}");
+                Debug.LogWarning($"Division by zero");
                 return 0f;
             }
 
@@ -46,7 +48,8 @@ namespace GraphToolkitTutorials.HelloGraph
             {
                 return graph.EvaluatePort(connectedPort);
             }
-            return 0f;
+            inputPort.TryGetValue(out float value);
+            return value;
         }
     }
 }

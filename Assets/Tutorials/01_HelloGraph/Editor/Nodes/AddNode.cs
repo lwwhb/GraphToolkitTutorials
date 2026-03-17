@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ namespace GraphToolkitTutorials.HelloGraph
     /// 加法节点 - 计算两个输入值的和
     /// 演示如何从输入端口获取值并进行计算
     /// </summary>
-    [Node("Add", "Calculator")]
+    [Node("Calculator", "Assets/Tutorials/01_HelloGraph/Editor/Icons/add.png")]
+    [Serializable]
     internal class AddNode : Node, ICalculatorNode
     {
         private IPort m_InputA;
@@ -52,7 +54,8 @@ namespace GraphToolkitTutorials.HelloGraph
             {
                 return graph.EvaluatePort(connectedPort);
             }
-            return 0f;
+            inputPort.TryGetValue(out float value);
+            return value;
         }
     }
 }
