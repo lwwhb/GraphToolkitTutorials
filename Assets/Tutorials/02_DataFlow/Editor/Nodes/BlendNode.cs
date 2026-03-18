@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ namespace GraphToolkitTutorials.DataFlow
     /// 混合纹理节点
     /// 将两个纹理按指定比例混合
     /// </summary>
-    [Node("Blend", "Texture")]
+    [Node("Texture", "")]
+    [Serializable]
     internal class BlendNode : Node, ITextureNode
     {
         public enum BlendMode
@@ -18,11 +20,7 @@ namespace GraphToolkitTutorials.DataFlow
             Screen
         }
 
-        [SerializeField]
-        private BlendMode m_BlendMode = BlendMode.Mix;
-
-        [SerializeField]
-        private float m_BlendFactor = 0.5f;
+        private INodeOption m_BlendMode;
 
         private IPort m_TextureAInput;
         private IPort m_TextureBInput;
@@ -33,7 +31,7 @@ namespace GraphToolkitTutorials.DataFlow
         {
             m_TextureAInput = context.AddInputPort<Texture2D>("Texture A").Build();
             m_TextureBInput = context.AddInputPort<Texture2D>("Texture B").Build();
-            m_BlendFactorInput = context.AddInputPort<float>("Blend").Build();
+            m_BlendFactorInput = context.AddInputPort<float>("Blend Factor").WithDefaultValue(0.5f).Build();
             m_TextureOutput = context.AddOutputPort<Texture2D>("Result").Build();
         }
 
@@ -65,13 +63,23 @@ namespace GraphToolkitTutorials.DataFlow
             }
 
             // 获取混合因子
-            float blendFactor = m_BlendFactor;
+            float blendFactor = 0.0f;
             var connectedBlendPort = graph.GetConnectedOutputPort(m_BlendFactorInput);
             if (connectedBlendPort != null)
             {
                 blendFactor = graph.EvaluateFloatPort(connectedBlendPort);
             }
+            else
+            {
+                m_BlendFactorInput.TryGetValue(out float blend);
+                blendFactor = blend;
+            }
             blendFactor = Mathf.Clamp01(blendFactor);
+
+            // 获取混合模式
+            BlendMode blendMode = BlendMode.Mix;
+            if (m_BlendMode != null && m_BlendMode.TryGetValue(out BlendMode modeValue))
+                blendMode = modeValue;
 
             // 确保纹理尺寸一致
             int width = Mathf.Min(textureA.width, textureB.width);
@@ -85,7 +93,7 @@ namespace GraphToolkitTutorials.DataFlow
                 {
                     Color colorA = textureA.GetPixel(x, y);
                     Color colorB = textureB.GetPixel(x, y);
-                    Color blended = BlendColors(colorA, colorB, blendFactor);
+                    Color blended = BlendColors(colorA, colorB, blendFactor, blendMode);
                     result.SetPixel(x, y, blended);
                 }
             }
@@ -94,9 +102,9 @@ namespace GraphToolkitTutorials.DataFlow
             return result;
         }
 
-        private Color BlendColors(Color a, Color b, float t)
+        private Color BlendColors(Color a, Color b, float t, BlendMode mode)
         {
-            switch (m_BlendMode)
+            switch (mode)
             {
                 case BlendMode.Mix:
                     return Color.Lerp(a, b, t);
@@ -132,8 +140,7 @@ namespace GraphToolkitTutorials.DataFlow
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Blend Mode", () => m_BlendMode, v => m_BlendMode = v).Build();
-            context.AddOption("Blend Factor", () => m_BlendFactor, v => m_BlendFactor = Mathf.Clamp01(v)).Build();
+            m_BlendMode = context.AddOption<BlendMode>("Blend Mode").Build();
         }
     }
 }

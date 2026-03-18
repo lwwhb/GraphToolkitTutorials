@@ -10,7 +10,7 @@ namespace GraphToolkitTutorials.DataFlow
     /// 负责导入.texgraph文件并生成纹理资产
     /// </summary>
     [ScriptedImporter(1, "texgraph")]
-    internal class TextureGraphImporter : ScriptedImporter
+    public class TextureGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {

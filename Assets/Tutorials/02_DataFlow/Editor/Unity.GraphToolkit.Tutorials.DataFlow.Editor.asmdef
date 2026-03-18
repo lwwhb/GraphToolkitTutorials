@@ -2,7 +2,8 @@
     "name": "Unity.GraphToolkit.Tutorials.DataFlow.Editor",
     "rootNamespace": "GraphToolkitTutorials.DataFlow",
     "references": [
-        "Unity.GraphToolkit.Editor"
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Common.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,24 +8,18 @@ namespace GraphToolkitTutorials.DataFlow
     /// 统一颜色纹理节点
     /// 生成一个纯色纹理
     /// </summary>
-    [Node("Uniform Color", "Texture")]
-    internal class UniformColorNode : Node, ITextureNode, IColorNode
+    [Node("Texture", "")]
+    [Serializable]
+    internal class UniformColorNode : Node, ITextureNode
     {
-        [SerializeField]
-        private Color m_Color = Color.white;
-
-        [SerializeField]
-        private int m_Width = 256;
-
-        [SerializeField]
-        private int m_Height = 256;
-
         private IPort m_ColorInput;
+        private IPort m_ResolutionInput;
         private IPort m_TextureOutput;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             m_ColorInput = context.AddInputPort<Color>("Color").Build();
+            m_ResolutionInput = context.AddInputPort<Vector2>("Resolution").WithDefaultValue(new Vector2(512, 512)).Build();
             m_TextureOutput = context.AddOutputPort<Texture2D>("Texture").Build();
         }
 
@@ -34,38 +29,36 @@ namespace GraphToolkitTutorials.DataFlow
                 return null;
 
             // 获取颜色（从输入端口或使用默认值）
-            Color color = m_Color;
-            var connectedPort = graph.GetConnectedOutputPort(m_ColorInput);
-            if (connectedPort != null)
+            Color color = Color.white;
+            var connectedColorPort = graph.GetConnectedOutputPort(m_ColorInput);
+            if (connectedColorPort != null)
             {
-                color = graph.EvaluateColorPort(connectedPort);
+                color = graph.EvaluateColorPort(connectedColorPort);
             }
 
+            // 获取尺寸
+            Vector2 resolution = Vector2.one;
+            var connectedResolutionPort = graph.GetConnectedOutputPort(m_ResolutionInput);
+            if (connectedResolutionPort != null)
+            {
+                resolution = graph.EvaluateVector2Port(connectedResolutionPort);
+            }
+            else
+            {
+                m_ResolutionInput.TryGetValue(out Vector2 resolutionValue);
+                resolution = resolutionValue;
+            }
+            
             // 创建纹理
-            Texture2D texture = new Texture2D(m_Width, m_Height, TextureFormat.RGBA32, false);
-            Color[] pixels = new Color[m_Width * m_Height];
-
+            Texture2D texture = new Texture2D((int)resolution.x, (int)resolution.y, TextureFormat.RGBA32, false);
+            Color[] pixels = new Color[(int)resolution.x * (int)resolution.y];
             for (int i = 0; i < pixels.Length; i++)
             {
                 pixels[i] = color;
             }
-
             texture.SetPixels(pixels);
             texture.Apply();
-
             return texture;
-        }
-
-        public Color EvaluateColor(IPort port, TextureGraph graph)
-        {
-            return m_Color;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Color", () => m_Color, v => m_Color = v).Build();
-            context.AddOption("Width", () => m_Width, v => m_Width = Mathf.Max(1, v)).Build();
-            context.AddOption("Height", () => m_Height, v => m_Height = Mathf.Max(1, v)).Build();
         }
     }
 }

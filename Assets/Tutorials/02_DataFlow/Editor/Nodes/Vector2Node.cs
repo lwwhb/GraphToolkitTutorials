@@ -10,25 +10,25 @@ namespace GraphToolkitTutorials.DataFlow
     /// </summary>
     [Node("Texture", "")]
     [Serializable]
-    internal class FloatNode : Node, IFloatNode
+    internal class Vector2Node : Node, IVector2Node
     {
         private INodeOption m_Value;
         private IPort m_Output;
-
+        
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            m_Output = context.AddOutputPort<float>("Value").Build();
+            m_Output = context.AddOutputPort<Vector2>("Value").Build();
         }
-
-        public float EvaluateFloat(IPort port, TextureGraph graph)
+        
+        public Vector2 EvaluateVector2(IPort port, TextureGraph graph)
         {
-            if (m_Value != null && m_Value.TryGetValue(out float value))
+            if (m_Value != null && m_Value.TryGetValue(out Vector2 value))
             {
                 return value;
             }
-            return 0.5f;
+            return Vector2.one;
         }
-
+        
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
             m_Value = context.AddOption<float>("Value").Build();

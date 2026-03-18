@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ namespace GraphToolkitTutorials.DataFlow
     /// 输出节点
     /// 标记纹理图形的最终输出
     /// </summary>
-    [Node("Output", "Texture")]
+    [Node("Texture", "")]
+    [Serializable]
     internal class OutputNode : Node, ITextureNode
     {
         private IPort m_TextureInput;
@@ -32,14 +34,6 @@ namespace GraphToolkitTutorials.DataFlow
                 m_CachedTexture = null;
             }
 
-            return m_CachedTexture;
-        }
-
-        /// <summary>
-        /// 获取缓存的纹理
-        /// </summary>
-        public Texture2D GetTexture()
-        {
             return m_CachedTexture;
         }
     }

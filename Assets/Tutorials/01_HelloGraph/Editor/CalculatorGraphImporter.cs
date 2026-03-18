@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using Unity.GraphToolkit.Editor;
@@ -10,15 +11,6 @@ namespace GraphToolkitTutorials.HelloGraph
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {
-            //设置图标
-            Texture2D icon =
-                EditorGUIUtility.Load("Assets/Tutorials/01_HelloGraph/Editor/Icons/calculator.png") as Texture2D;
-            if (icon != null)
-            {
-                ctx.AddObjectToAsset("calculator", icon);
-                ctx.SetMainObject(icon);
-            }
-            
             // 加载图形
             var graph = GraphDatabase.LoadGraphForImporter<CalculatorGraph>(ctx.assetPath);
             if (graph == null)
@@ -40,6 +32,13 @@ namespace GraphToolkitTutorials.HelloGraph
                     break;
                 }
             }
+            
+            //设置图标
+            var fileText = File.ReadAllText(ctx.assetPath);
+            var asset = new TextAsset(fileText);
+            var icon = EditorGUIUtility.IconContent("Assets/Tutorials/01_HelloGraph/Editor/Icons/calculator.png").image as Texture2D;
+            ctx.AddObjectToAsset("icon", asset, icon);
+            ctx.SetMainObject(asset);
             
             Debug.Log($"Calculator graph evaluated: {result}");
         }

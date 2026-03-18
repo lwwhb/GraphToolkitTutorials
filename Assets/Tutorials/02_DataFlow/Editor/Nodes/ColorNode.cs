@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,12 +8,11 @@ namespace GraphToolkitTutorials.DataFlow
     /// 颜色常量节点
     /// 输出一个固定的颜色值
     /// </summary>
-    [Node("Color", "Texture")]
+    [Node("Texture", "")]
+    [Serializable]
     internal class ColorNode : Node, IColorNode
     {
-        [SerializeField]
-        private Color m_Color = Color.white;
-
+        private INodeOption m_Color;
         private IPort m_Output;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -22,12 +22,16 @@ namespace GraphToolkitTutorials.DataFlow
 
         public Color EvaluateColor(IPort port, TextureGraph graph)
         {
-            return m_Color;
+            if (m_Color != null && m_Color.TryGetValue(out Color value))
+            {
+                return value;
+            }
+            return Color.white;
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Color", () => m_Color, v => m_Color = v).Build();
+            m_Color = context.AddOption<Color>("Color").Build();
         }
     }
 }

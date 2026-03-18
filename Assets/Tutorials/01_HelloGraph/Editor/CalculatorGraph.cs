@@ -53,8 +53,18 @@ namespace GraphToolkitTutorials.HelloGraph
             {
                 return calcNode.Evaluate(port, this);
             }
-
-            return 0f;
+            else if (node is IVariableNode variableNode)
+            {
+                variableNode.Variable.TryGetDefaultValue(out float value);
+                return value;
+            }
+            else if (node is IConstantNode constantNode)
+            {
+                constantNode.TryGetValue(out float value);
+                return value;
+            }
+            else
+                return 0f;
         }
 
         /// <summary>

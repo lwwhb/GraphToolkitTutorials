@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,28 +8,20 @@ namespace GraphToolkitTutorials.DataFlow
     /// 噪声纹理节点
     /// 生成程序化噪声纹理（Perlin噪声）
     /// </summary>
-    [Node("Noise", "Texture")]
+    [Node("Texture", "")]
+    [Serializable]
     internal class NoiseNode : Node, ITextureNode
     {
-        [SerializeField]
-        private float m_Scale = 10f;
-
-        [SerializeField]
-        private float m_OffsetX = 0f;
-
-        [SerializeField]
-        private float m_OffsetY = 0f;
-
-        [SerializeField]
-        private int m_Width = 256;
-
-        [SerializeField]
-        private int m_Height = 256;
-
+        private IPort m_ResolutionInput;
+        private IPort m_OffsetInput;
+        private IPort m_ScaleInput;
         private IPort m_TextureOutput;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
+            m_ResolutionInput = context.AddInputPort<Vector2>("Resolution").WithDefaultValue(new Vector2(512, 512)).Build();
+            m_OffsetInput = context.AddInputPort<Vector2>("Offset").WithDefaultValue(new Vector2(0.2f, 0.2f)).Build();
+            m_ScaleInput = context.AddInputPort<int>("Scale").WithDefaultValue(100).Build();
             m_TextureOutput = context.AddOutputPort<Texture2D>("Texture").Build();
         }
 
@@ -36,31 +29,61 @@ namespace GraphToolkitTutorials.DataFlow
         {
             if (port != m_TextureOutput)
                 return null;
-
-            Texture2D texture = new Texture2D(m_Width, m_Height, TextureFormat.RGBA32, false);
-
-            for (int y = 0; y < m_Height; y++)
+            
+            // 获取尺寸
+            Vector2 resolution = Vector2.one;
+            var connectedResolutionPort = graph.GetConnectedOutputPort(m_ResolutionInput);
+            if (connectedResolutionPort != null)
             {
-                for (int x = 0; x < m_Width; x++)
+                resolution = graph.EvaluateVector2Port(connectedResolutionPort);
+            }
+            else
+            {
+                m_ResolutionInput.TryGetValue(out Vector2 resolutionValue);
+                resolution = resolutionValue;
+            }
+
+            // 获取位移
+            Vector2 offset = Vector2.one;
+            var connectedOffsetPort = graph.GetConnectedOutputPort(m_OffsetInput);
+            if (connectedOffsetPort != null)
+            {
+                offset = graph.EvaluateVector2Port(connectedResolutionPort);
+            }
+            else
+            {
+                m_OffsetInput.TryGetValue(out Vector2 offsetValue);
+                offset = offsetValue;
+            }
+            
+            // 获取缩放
+            float scale = 1.0f;
+            var connectedScalePort = graph.GetConnectedOutputPort(m_ScaleInput);
+            if (connectedScalePort != null)
+            {
+                scale = graph.EvaluateFloatPort(connectedScalePort);
+            }
+            else
+            {
+                m_ScaleInput.TryGetValue(out int scaleValue);
+                scale = scaleValue;
+            }
+            
+            // 创建纹理
+            Texture2D texture = new Texture2D((int)resolution.x, (int)resolution.y, TextureFormat.RGBA32, false);
+            Color[] pixels = new Color[(int)resolution.x * (int)resolution.y];
+            for (int y = 0; y < (int)resolution.y; y++)
+            {
+                for (int x = 0; x < (int)resolution.x; x++)
                 {
-                    float nx = (float)x / m_Width * m_Scale + m_OffsetX;
-                    float ny = (float)y / m_Height * m_Scale + m_OffsetY;
+                    float nx = (float)x / (int)resolution.x * scale + offset.x;
+                    float ny = (float)y / (int)resolution.y * scale + offset.y;
                     float value = Mathf.PerlinNoise(nx, ny);
                     texture.SetPixel(x, y, new Color(value, value, value, 1f));
                 }
             }
-
-            texture.Apply();
+            texture.Apply(); 
             return texture;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Scale", () => m_Scale, v => m_Scale = Mathf.Max(0.01f, v)).Build();
-            context.AddOption("Offset X", () => m_OffsetX, v => m_OffsetX = v).Build();
-            context.AddOption("Offset Y", () => m_OffsetY, v => m_OffsetY = v).Build();
-            context.AddOption("Width", () => m_Width, v => m_Width = Mathf.Max(1, v)).Build();
-            context.AddOption("Height", () => m_Height, v => m_Height = Mathf.Max(1, v)).Build();
         }
     }
 }

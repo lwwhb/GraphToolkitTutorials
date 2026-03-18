@@ -26,6 +26,18 @@ namespace GraphToolkitTutorials.DataFlow
         /// </summary>
         Color EvaluateColor(IPort port, TextureGraph graph);
     }
+    
+    /// <summary>
+    /// 颜色节点接口
+    /// 所有生成颜色的节点都需要实现此接口
+    /// </summary>
+    internal interface IVector2Node
+    {
+        /// <summary>
+        /// 评估指定端口的颜色
+        /// </summary>
+        Vector2 EvaluateVector2(IPort port, TextureGraph graph);
+    }
 
     /// <summary>
     /// 浮点节点接口

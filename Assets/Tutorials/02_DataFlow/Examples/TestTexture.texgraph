@@ -1,0 +1,207 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 61
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 12501, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: TestTexture
+  m_EditorClassIdentifier: UnityEditor.dll::Unity.GraphToolkit.Editor.Implementation.GraphObjectImp
+  m_GraphModel:
+    rid: 1538439256413569391
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 1538439256413569391
+      type: {class: GraphModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 18247317604385036136
+          m_Value1: 17522964492072442144
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 68171ac9ae7e3bfd20d9c2695d132ef3
+        m_Name: 
+        m_GraphNodeModels:
+        - rid: 1538439256413569394
+        - rid: 1538439256413569397
+        m_GraphWireModels:
+        - rid: 1538439256413569399
+        m_GraphStickyNoteModels: []
+        m_GraphPlacematModels: []
+        m_GraphVariableModels: []
+        m_GraphPortalModels: []
+        m_SectionModels:
+        - rid: 1538439256413569392
+        m_LocalSubgraphs: []
+        m_LastKnownBounds:
+          serializedVersion: 2
+          x: 308
+          y: 83.5
+          width: 428
+          height: 87
+        m_GraphElementMetaData:
+        - m_Guid:
+            m_Value0: 13813069510716331962
+            m_Value1: 5798460248213609633
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: ba97060489e1b1bfa1dcfecadf447850
+          m_Category: 0
+          m_Index: 0
+        - m_Guid:
+            m_Value0: 6525457384057739986
+            m_Value1: 3762234397958507985
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: d21ab6ddea148f5ad18d127440243634
+          m_Category: 0
+          m_Index: 1
+        - m_Guid:
+            m_Value0: 2972040199853209655
+            m_Value1: 13886141508680379289
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 37786eb2d0ce3e29996bb355217cb5c0
+          m_Category: 2
+          m_Index: 0
+        m_EntryPoint:
+          rid: 1538439256413569394
+        m_Graph:
+          rid: 1538439256413569393
+    - rid: 1538439256413569392
+      type: {class: SectionModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 8143396350045475491
+          m_Value1: 6016929594694997932
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: a352acb5d5270371ac97545a966d8053
+        m_Version: 2
+        m_Items: []
+        m_Title: 
+    - rid: 1538439256413569393
+      type: {class: TextureGraph, ns: GraphToolkitTutorials.DataFlow, asm: Unity.GraphToolkit.Tutorials.DataFlow.Editor}
+      data: 
+    - rid: 1538439256413569394
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 13813069510716331962
+          m_Value1: 5798460248213609633
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: ba97060489e1b1bfa1dcfecadf447850
+        m_Version: 2
+        m_Position: {x: 602, y: 83.5}
+        m_Title: 
+        m_Tooltip: 
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList:
+          - Texture
+          m_ValueList:
+          - rid: 1538439256413569395
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList: 
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList: 
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 1538439256413569396
+    - rid: 1538439256413569395
+      type: {class: 'Constant`1[[UnityEngine.Texture2D, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: {fileID: 0}
+    - rid: 1538439256413569396
+      type: {class: OutputNode, ns: GraphToolkitTutorials.DataFlow, asm: Unity.GraphToolkit.Tutorials.DataFlow.Editor}
+      data:
+        m_CachedTexture: {fileID: 0}
+    - rid: 1538439256413569397
+      type: {class: ConstantNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 6525457384057739986
+          m_Value1: 3762234397958507985
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: d21ab6ddea148f5ad18d127440243634
+        m_Version: 2
+        m_Position: {x: 300, y: 96.5}
+        m_Title: 
+        m_Tooltip: 
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList: []
+          m_ValueList: []
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList: 
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList: 
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Value:
+          rid: 1538439256413569398
+    - rid: 1538439256413569398
+      type: {class: 'Constant`1[[UnityEngine.Texture2D, UnityEngine.CoreModule]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: {fileID: 10309, guid: 0000000000000000f000000000000000, type: 0}
+    - rid: 1538439256413569399
+      type: {class: WireModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 2972040199853209655
+          m_Value1: 13886141508680379289
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 37786eb2d0ce3e29996bb355217cb5c0
+        m_Version: 2
+        m_FromPortReference:
+          m_NodeModelGuid:
+            m_Value0: 6525457384057739986
+            m_Value1: 3762234397958507985
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: d21ab6ddea148f5ad18d127440243634
+          m_UniqueId: Output_0
+          m_PortDirection: 2
+          m_PortOrientation: 0
+          m_Title: 
+        m_ToPortReference:
+          m_NodeModelGuid:
+            m_Value0: 13813069510716331962
+            m_Value1: 5798460248213609633
+          m_NodeModelHashGuid:
+            serializedVersion: 2
+            Hash: ba97060489e1b1bfa1dcfecadf447850
+          m_UniqueId: Texture
+          m_PortDirection: 1
+          m_PortOrientation: 0
+          m_Title: Texture
