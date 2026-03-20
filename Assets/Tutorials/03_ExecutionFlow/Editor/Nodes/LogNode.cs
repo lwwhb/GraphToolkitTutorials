@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,14 +8,12 @@ namespace GraphToolkitTutorials.ExecutionFlow
     /// 日志节点
     /// 输出日志信息到控制台
     /// </summary>
-    [Node("Log", "Task")]
+    [Node("Task", "")]
+    [Serializable]
     internal class LogNode : TaskNode
     {
-        [SerializeField]
-        private string m_Message = "Hello from Task Graph!";
-
-        [SerializeField]
-        private LogType m_LogType = LogType.Log;
+        private INodeOption m_Message;
+        private INodeOption m_LogType;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
@@ -23,23 +22,24 @@ namespace GraphToolkitTutorials.ExecutionFlow
 
         public override Runtime.TaskRuntimeNode CreateRuntimeNode(TaskGraph graph)
         {
-            var runtimeNode = new Runtime.LogNode
-            {
-                message = m_Message,
-                logType = m_LogType
-            };
+            var runtimeNode = new Runtime.LogNode();
 
-            // 获取下一个节点的索引
+            if (m_Message != null && m_Message.TryGetValue(out string message))
+                runtimeNode.message = message;
+
+            if (m_LogType != null && m_LogType.TryGetValue(out LogType logType))
+                runtimeNode.logType = logType;
+
             var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? graph.GetNodes().IndexOf(nextNode) : -1;
+            runtimeNode.nextNodeIndex = nextNode != null ? graph.GetNodeIndex(nextNode) : -1;
 
             return runtimeNode;
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Message", () => m_Message, v => m_Message = v).Build();
-            context.AddOption("Log Type", () => m_LogType, v => m_LogType = v).Build();
+            m_Message = context.AddOption<string>("Message").Build();
+            m_LogType = context.AddOption<LogType>("Log Type").Build();
         }
     }
 }

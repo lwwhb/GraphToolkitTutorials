@@ -66,8 +66,10 @@ MonoBehaviour:
         - rid: 1538439288840519825
         - rid: 1538439288840519842
         - rid: 1538439288840519843
-        m_GraphStickyNoteModels: []
-        m_GraphPlacematModels: []
+        m_GraphStickyNoteModels:
+        - rid: 1538439327745310781
+        m_GraphPlacematModels:
+        - rid: 1538439327745310780
         m_GraphVariableModels:
         - rid: 1538439256413569381
         - rid: 1538439256413569385
@@ -79,10 +81,10 @@ MonoBehaviour:
         m_LocalSubgraphs: []
         m_LastKnownBounds:
           serializedVersion: 2
-          x: -660
-          y: 302.5
-          width: 2447.5
-          height: 1423
+          x: -697
+          y: 95.5
+          width: 2521.5
+          height: 1667
         m_GraphElementMetaData:
         - m_Guid:
             m_Value0: 11298093824717359150
@@ -1374,7 +1376,7 @@ MonoBehaviour:
           serializedVersion: 2
           Hash: b779d578c5b6583788130f57e92b2fb4
         m_Version: 2
-        m_Position: {x: 646.01184, y: 1240.6313}
+        m_Position: {x: 727.72186, y: 1335.9596}
         m_Title: 
         m_Tooltip: 
         m_NodePreviewModel:
@@ -1950,3 +1952,46 @@ MonoBehaviour:
           m_PortDirection: 1
           m_PortOrientation: 0
           m_Title: Texture A
+    - rid: 1538439327745310780
+      type: {class: PlacematModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 6339063971162843718
+          m_Value1: 4824304941252789806
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 466aa39118e1f8572ec688a7c85ff342
+        m_Version: 2
+        m_Title: "\u7EB9\u7406\u751F\u6210"
+        m_TitleFontSize: 18
+        m_TitleAlignment: 0
+        m_Position:
+          serializedVersion: 2
+          x: -697
+          y: 95.27083
+          width: 2521.5
+          height: 1667.2291
+        m_Comment: 
+        m_ElementColor:
+          m_Color: {r: 0.20784314, g: 0.22745098, b: 0.2784314, a: 1}
+          m_HasUserColor: 0
+    - rid: 1538439327745310781
+      type: {class: StickyNoteModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 11740694768380778546
+          m_Value1: 16986959133604394702
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 32989fddaf53efa2ce3691cc54cdbdeb
+        m_Version: 2
+        m_Title: "\u7EB9\u7406\u751F\u6210\u6570\u636E\u6D41"
+        m_Contents: 
+        m_ThemeName: Classic
+        m_TextSizeName: Huge
+        m_Position:
+          serializedVersion: 2
+          x: -657.5
+          y: 128.46165
+          width: 2424.5
+          height: 1598.5383

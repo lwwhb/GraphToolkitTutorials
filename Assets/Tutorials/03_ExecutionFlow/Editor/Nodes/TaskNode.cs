@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,6 +8,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
     /// 任务节点基类
     /// 所有任务节点都继承自此类
     /// </summary>
+    [Serializable]
     internal abstract class TaskNode : Node
     {
         /// <summary>
@@ -41,14 +43,13 @@ namespace GraphToolkitTutorials.ExecutionFlow
             var connectedPort = graph.GetConnectedInputPort(m_ExecutionOut);
             if (connectedPort != null)
             {
-                return connectedPort.Node as TaskNode;
+                return graph.FindNodeForPort(connectedPort) as TaskNode;
             }
             return null;
         }
 
         /// <summary>
         /// 创建运行时节点数据
-        /// 子类需要实现此方法来创建对应的运行时节点
         /// </summary>
         public abstract Runtime.TaskRuntimeNode CreateRuntimeNode(TaskGraph graph);
     }

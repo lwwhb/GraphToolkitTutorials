@@ -10,7 +10,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
     /// 负责导入.taskgraph文件并生成运行时图形资产
     /// </summary>
     [ScriptedImporter(1, "taskgraph")]
-    internal class TaskGraphImporter : ScriptedImporter
+    public class TaskGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {
@@ -32,7 +32,7 @@ namespace GraphToolkitTutorials.ExecutionFlow
             ctx.SetMainObject(runtimeGraph);
 
             // 添加编辑器图形作为子资产
-            ctx.AddObjectToAsset("editor_graph", editorGraph);
+            //ctx.AddObjectToAsset("editor_graph", editorGraph);
 
             Debug.Log($"Task graph imported: {runtimeGraph.nodes.Count} nodes");
         }

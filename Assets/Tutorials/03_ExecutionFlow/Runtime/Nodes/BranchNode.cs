@@ -9,6 +9,7 @@ namespace GraphToolkitTutorials.ExecutionFlow.Runtime
     public class BranchNode : TaskRuntimeNode
     {
         public bool condition = true;
+        public string conditionVariableName = "";
         public int trueNodeIndex = -1;
         public int falseNodeIndex = -1;
     }

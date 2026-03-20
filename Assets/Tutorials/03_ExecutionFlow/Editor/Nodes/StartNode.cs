@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ namespace GraphToolkitTutorials.ExecutionFlow
     /// 起始节点
     /// 标记任务图形的执行起点
     /// </summary>
-    [Node("Start", "Task")]
+    [Node("Task", "")]
+    [Serializable]
     internal class StartNode : TaskNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -22,9 +24,8 @@ namespace GraphToolkitTutorials.ExecutionFlow
         {
             var runtimeNode = new Runtime.StartNode();
 
-            // 获取下一个节点的索引
             var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? graph.GetNodes().IndexOf(nextNode) : -1;
+            runtimeNode.nextNodeIndex = nextNode != null ? graph.GetNodeIndex(nextNode) : -1;
 
             return runtimeNode;
         }

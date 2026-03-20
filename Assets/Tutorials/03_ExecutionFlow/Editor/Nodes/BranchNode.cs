@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -7,12 +8,11 @@ namespace GraphToolkitTutorials.ExecutionFlow
     /// 分支节点
     /// 根据条件选择不同的执行路径
     /// </summary>
-    [Node("Branch", "Task")]
+    [Node("Task", "")]
+    [Serializable]
     internal class BranchNode : TaskNode
     {
-        [SerializeField]
-        private bool m_Condition = true;
-
+        private IPort m_ConditionInput;
         private IPort m_TrueOut;
         private IPort m_FalseOut;
 
@@ -22,8 +22,6 @@ namespace GraphToolkitTutorials.ExecutionFlow
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
                 .Build();
 
-            context.AddInputPort<bool>("Condition").Build();
-
             m_TrueOut = context.AddOutputPort("True")
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
                 .Build();
@@ -31,20 +29,35 @@ namespace GraphToolkitTutorials.ExecutionFlow
             m_FalseOut = context.AddOutputPort("False")
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
                 .Build();
+            
+            m_ConditionInput = context.AddInputPort<bool>("Condition").WithDefaultValue(true).Build();
         }
 
         public override Runtime.TaskRuntimeNode CreateRuntimeNode(TaskGraph graph)
         {
-            var runtimeNode = new Runtime.BranchNode
+            var runtimeNode = new Runtime.BranchNode();
+            // 条件（从输入端口或使用默认值）
+            m_ConditionInput.TryGetValue(out bool value);
+            var conditionPort = graph.GetConnectedOutputPort(m_ConditionInput);
+            if (conditionPort != null && conditionPort.Direction == PortDirection.Output)
             {
-                condition = m_Condition
-            };
+                var node = graph.FindNodeForPort(conditionPort);
+                if (node is IConstantNode constantNode)
+                    constantNode.TryGetValue(out value);
+                else if (node is IVariableNode variableNode)
+                {
+                    variableNode.Variable.TryGetDefaultValue(out value);
+                    runtimeNode.conditionVariableName = variableNode.Variable.Name;
+                }
+            }
+            runtimeNode.condition = value;
 
             // 获取True分支的下一个节点
-            var truePort = graph.GetConnectedInputPort(m_TrueOut);
-            if (truePort != null && truePort.Node is TaskNode trueNode)
+            var trueConnectedPort = graph.GetConnectedInputPort(m_TrueOut);
+            if (trueConnectedPort != null)
             {
-                runtimeNode.trueNodeIndex = graph.GetNodes().IndexOf(trueNode);
+                var trueNode = graph.FindNodeForPort(trueConnectedPort) as TaskNode;
+                runtimeNode.trueNodeIndex = trueNode != null ? graph.GetNodeIndex(trueNode) : -1;
             }
             else
             {
@@ -52,10 +65,11 @@ namespace GraphToolkitTutorials.ExecutionFlow
             }
 
             // 获取False分支的下一个节点
-            var falsePort = graph.GetConnectedInputPort(m_FalseOut);
-            if (falsePort != null && falsePort.Node is TaskNode falseNode)
+            var falseConnectedPort = graph.GetConnectedInputPort(m_FalseOut);
+            if (falseConnectedPort != null)
             {
-                runtimeNode.falseNodeIndex = graph.GetNodes().IndexOf(falseNode);
+                var falseNode = graph.FindNodeForPort(falseConnectedPort) as TaskNode;
+                runtimeNode.falseNodeIndex = falseNode != null ? graph.GetNodeIndex(falseNode) : -1;
             }
             else
             {
@@ -63,11 +77,6 @@ namespace GraphToolkitTutorials.ExecutionFlow
             }
 
             return runtimeNode;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Condition", () => m_Condition, v => m_Condition = v).Build();
         }
     }
 }

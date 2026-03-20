@@ -10,6 +10,27 @@ namespace GraphToolkitTutorials.ExecutionFlow.Runtime
     /// </summary>
     public class TaskRuntimeGraph : ScriptableObject
     {
+        // 新增变量存储
+        [Serializable]
+        public class RuntimeVariable
+        {
+            public string name;
+            public bool boolValue;
+        }
+
+        public List<RuntimeVariable> variables = new List<RuntimeVariable>();
+
+        public bool GetBool(string name, bool defaultValue = false)
+        {
+            var v = variables.Find(x => x.name == name);
+            return v != null ? v.boolValue : defaultValue;
+        }
+
+        public void SetBool(string name, bool value)
+        {
+            var v = variables.Find(x => x.name == name);
+            if (v != null) v.boolValue = value;
+        }
         /// <summary>
         /// 所有运行时节点
         /// </summary>

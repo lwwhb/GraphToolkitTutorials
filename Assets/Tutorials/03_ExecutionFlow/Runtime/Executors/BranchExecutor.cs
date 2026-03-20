@@ -17,10 +17,14 @@ namespace GraphToolkitTutorials.ExecutionFlow.Runtime
                 yield break;
             }
 
-            Debug.Log($"Branch condition: {node.condition}");
+            // 优先从运行时变量读取，否则使用导入时的默认值
+            bool condition = string.IsNullOrEmpty(node.conditionVariableName)
+                ? node.condition
+                : graph.GetBool(node.conditionVariableName, node.condition);
 
-            // 根据条件选择分支
-            int nextIndex = node.condition ? node.trueNodeIndex : node.falseNodeIndex;
+            Debug.Log($"Branch condition '{node.conditionVariableName}': {condition}");
+
+            int nextIndex = condition ? node.trueNodeIndex : node.falseNodeIndex;
 
             if (nextIndex >= 0)
             {
@@ -28,7 +32,7 @@ namespace GraphToolkitTutorials.ExecutionFlow.Runtime
             }
             else
             {
-                Debug.LogWarning($"Branch has no valid path for condition: {node.condition}");
+                Debug.LogWarning($"Branch has no valid path for condition: {condition}");
             }
         }
     }
