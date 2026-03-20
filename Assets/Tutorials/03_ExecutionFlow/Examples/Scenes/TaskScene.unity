@@ -277,7 +277,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.GraphToolkit.Tutorials.ExecutionFlow.Runtime::GraphToolkitTutorials.ExecutionFlow.Runtime.TaskExecutor
   m_Graph: {fileID: -6750239444755058063, guid: ba2234739fffc4db183cc21401668fb2, type: 3}
   m_AutoStart: 1
-  m_Loop: 0
+  m_Loop: 1
+  m_DelayMode: 1
 --- !u!4 &659751261
 Transform:
   m_ObjectHideFlags: 0
