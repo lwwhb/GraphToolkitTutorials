@@ -1,89 +1,80 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
 namespace GraphToolkitTutorials.VariablesSubgraphs
 {
     /// <summary>
-    /// 材质输出节点
-    /// 定义材质的最终属性
+    /// 材质输出节点 — 收集所有 PBR 参数并生成 Material
+    /// 由 MaterialGraph.OnEnable / OnGraphChanged 确保始终存在，不可被永久删除
     /// </summary>
-    [Node("Material Output", "Material")]
+    [Node("Material Output", "")]
     [UseWithGraph(typeof(MaterialGraph))]
-    internal class MaterialOutputNode : Node, IColorNode
+    [Serializable]
+    internal class MaterialOutputNode : Node
     {
-        [SerializeField]
-        private float m_Metallic = 0f;
-
-        [SerializeField]
-        private float m_Smoothness = 0.5f;
-
         private IPort m_BaseColorInput;
         private IPort m_MetallicInput;
         private IPort m_SmoothnessInput;
+        private IPort m_EmissionColorInput;
+        private IPort m_EmissionIntensityInput;
 
+        // 缓存求值结果
         private Color m_CachedBaseColor = Color.white;
         private float m_CachedMetallic = 0f;
         private float m_CachedSmoothness = 0.5f;
+        private Color m_CachedEmissionColor = Color.black;
+        private float m_CachedEmissionIntensity = 0f;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            m_BaseColorInput = context.AddInputPort<Color>("Base Color").Build();
-            m_MetallicInput = context.AddInputPort<float>("Metallic").Build();
-            m_SmoothnessInput = context.AddInputPort<float>("Smoothness").Build();
+            m_BaseColorInput        = context.AddInputPort<Color>("Base Color").Build();
+            m_MetallicInput         = context.AddInputPort<float>("Metallic").Build();
+            m_SmoothnessInput       = context.AddInputPort<float>("Smoothness").Build();
+            m_EmissionColorInput    = context.AddInputPort<Color>("Emission Color").Build();
+            m_EmissionIntensityInput = context.AddInputPort<float>("Emission Intensity").WithDefaultValue(0f).Build();
         }
 
-        public Color EvaluateColor(IPort port, MaterialGraph graph)
+        /// <summary>
+        /// 触发整图求值，将所有 PBR 参数缓存起来
+        /// </summary>
+        public void EvaluateAll(MaterialGraph graph)
         {
-            // 评估基础颜色
-            var connectedPort = graph.GetConnectedOutputPort(m_BaseColorInput);
-            if (connectedPort != null)
+            // Base Color
+            var conn = graph.GetConnectedOutputPort(m_BaseColorInput);
+            m_CachedBaseColor = conn != null ? graph.EvaluateColorPort(conn) : Color.white;
+
+            // Metallic
+            conn = graph.GetConnectedOutputPort(m_MetallicInput);
+            m_CachedMetallic = conn != null ? graph.EvaluateFloatPort(conn) : 0f;
+
+            // Smoothness
+            conn = graph.GetConnectedOutputPort(m_SmoothnessInput);
+            m_CachedSmoothness = conn != null ? graph.EvaluateFloatPort(conn) : 0.5f;
+
+
+            // Emission Color
+            conn = graph.GetConnectedOutputPort(m_EmissionColorInput);
+            m_CachedEmissionColor = conn != null ? graph.EvaluateColorPort(conn) : Color.black;
+
+            // Emission Intensity
+            conn = graph.GetConnectedOutputPort(m_EmissionIntensityInput);
+            if (conn != null)
             {
-                m_CachedBaseColor = graph.EvaluateColorPort(connectedPort);
+                m_CachedEmissionIntensity = graph.EvaluateFloatPort(conn);
             }
             else
             {
-                m_CachedBaseColor = Color.white;
+                float intensity = 0f;
+                m_EmissionIntensityInput?.TryGetValue(out intensity);
+                m_CachedEmissionIntensity = intensity;
             }
-
-            // 评估金属度
-            connectedPort = graph.GetConnectedOutputPort(m_MetallicInput);
-            if (connectedPort != null)
-            {
-                m_CachedMetallic = graph.EvaluateFloatPort(connectedPort);
-            }
-            else
-            {
-                m_CachedMetallic = m_Metallic;
-            }
-
-            // 评估光滑度
-            connectedPort = graph.GetConnectedOutputPort(m_SmoothnessInput);
-            if (connectedPort != null)
-            {
-                m_CachedSmoothness = graph.EvaluateFloatPort(connectedPort);
-            }
-            else
-            {
-                m_CachedSmoothness = m_Smoothness;
-            }
-
-            return m_CachedBaseColor;
         }
 
-        public float GetMetallic()
-        {
-            return Mathf.Clamp01(m_CachedMetallic);
-        }
-
-        public float GetSmoothness()
-        {
-            return Mathf.Clamp01(m_CachedSmoothness);
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Metallic", () => m_Metallic, v => m_Metallic = Mathf.Clamp01(v)).Build();
-            context.AddOption("Smoothness", () => m_Smoothness, v => m_Smoothness = Mathf.Clamp01(v)).Build();
-        }
+        public Color GetBaseColor()            => m_CachedBaseColor;
+        public float GetMetallic()             => Mathf.Clamp01(m_CachedMetallic);
+        public float GetSmoothness()           => Mathf.Clamp01(m_CachedSmoothness);
+        public Color GetEmission()             => m_CachedEmissionColor;
+        public float GetEmissionIntensity()    => Mathf.Max(0f, m_CachedEmissionIntensity);
     }
 }

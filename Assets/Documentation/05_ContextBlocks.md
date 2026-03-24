@@ -1,86 +1,70 @@
-# 教程5: ContextNode和BlockNode
+# 教程5: ContextNode 和 BlockNode — 着色器函数图
 
 ## 概述
 
-本教程将探讨GraphToolkit中最高级的节点类型：ContextNode和BlockNode。这些特殊节点允许你创建具有作用域和嵌套结构的图形，类似于Shader Graph中的自定义函数节点。
+本教程通过 **ShaderFunctionGraph**（`.shaderfunc`）演示 GraphToolkit 中的两种特殊节点类型：**ContextNode** 和 **BlockNode**。
+
+设计思路类似 Shader Graph 的自定义函数节点：一个 `FunctionContextNode` 作为函数容器，内部嵌套若干 `BlockNode` 依次对向量做变换，最终通过 `OutputNode` 将结果打印出来。
+
+这仍然是一个**数据流图（Pull 模式）**，`.shaderfunc` 文件导入时在 `ScriptedImporter` 中完成求值。
+
+---
 
 ## 学习目标
 
-- 理解ContextNode和BlockNode的概念
-- 掌握ContextNode作为容器的使用
-- 学会BlockNode的特殊性和限制
-- 实现作用域和嵌套结构
-- 创建类似Shader Graph的函数节点
+- 理解 `ContextNode` 与 `BlockNode` 的设计意图和框架内置 API
+- 使用 `[UseWithContext]` 将 `BlockNode` 与 `ContextNode` 关联
+- 使用 `ContextNode.BlockNodes` 遍历子块（`Graph.GetNodes()` 不包含 BlockNode）
+- 掌握 **`TryGetValue` 只读内联常量** 这一关键限制及其绕过方法
+- 使用 `GetConnectedOutputPort + EvaluateVectorPort` 读取连线上游的值
+
+---
 
 ## 核心概念
 
-### ContextNode vs 普通Node
+### ContextNode vs BlockNode vs 普通 Node
 
-#### 普通Node
+| 类型 | 放置位置 | 能否含 BlockNode | 属性标记 |
+|------|---------|----------------|---------|
+| 普通 `Node` | 图中任意位置 | ❌ | `[UseWithGraph]` |
+| `ContextNode` | 图中任意位置 | ✅ | `[UseWithGraph]` |
+| `BlockNode` | 只能在 ContextNode 内 | ❌ | `[UseWithContext]` |
+
+### 关键框架 API
+
+#### ContextNode 内置成员
 ```csharp
-// 普通节点 - 独立存在
-[Node("Add", "Math")]
-internal class AddNode : Node
-{
-    // 可以在图形的任何地方创建
-}
+IEnumerable<BlockNode> BlockNodes      // 遍历所有子块（Graph.GetNodes() 不含 BlockNode）
+int                    BlockCount      // 子块数量
+BlockNode              GetBlock(int i) // 按索引取子块
 ```
 
-#### ContextNode
+#### BlockNode 内置属性
 ```csharp
-// 上下文节点 - 可以包含BlockNode
-[Node("Function", "Shader")]
-internal class FunctionContextNode : ContextNode
-{
-    // 可以包含BlockNode作为子节点
-    // 提供作用域和封装
-}
+ContextNode ContextNode  // 父上下文节点（框架自动维护，无需手动查找）
+int         Index        // 在父块列表中的位置（0 起）
 ```
 
-**关键区别**:
-- **普通Node**: 独立的处理单元
-- **ContextNode**: 节点容器，定义作用域
+### TryGetValue 的关键限制
 
-### BlockNode的特殊性
+**`IPort.TryGetValue<T>()`** 在 INPUT 端口上只读 **内联常量**（编辑器里直接填的值），
+**不会**沿连线读取上游节点的值。
 
-BlockNode是只能存在于ContextNode内部的特殊节点。
+```
+InputPort ──wire──> ConstantNodeModelImp(1, 0, 0.4)
+
+port.TryGetValue<Vector3>(out v)   // v = (0,0,0)  ← 读的是内联常量，不是上游值！
+```
+
+正确做法：
 
 ```csharp
-// BlockNode - 只能在ContextNode内部
-[Node("Input A", "Shader/Block")]
-internal class InputABlockNode : BlockNode
-{
-    // 必须有一个父ContextNode
-    // 不能独立存在于图形中
-}
+// 1. 取得上游的 output port
+var upstream = graph.GetConnectedOutputPort(inputPort);   // inputPort.FirstConnectedPort
+
+// 2. 对 output port 求值
+Vector3 result = graph.EvaluateVectorPort(upstream);
 ```
-
-**BlockNode的限制**:
-1. 必须属于某个ContextNode
-2. 不能在ContextNode外部创建
-3. 不能在不同的ContextNode之间移动
-4. 删除ContextNode时，其所有BlockNode也会被删除
-
-### 架构模式
-
-```
-ShaderFunctionGraph
-├─ FunctionContextNode (ContextNode)
-│  ├─ InputABlockNode (BlockNode)
-│  ├─ InputBBlockNode (BlockNode)
-│  ├─ AddBlockNode (BlockNode)
-│  ├─ MultiplyBlockNode (BlockNode)
-│  └─ OutputBlockNode (BlockNode)
-├─ Vector3Node (普通Node)
-└─ FloatNode (普通Node)
-```
-
-**工作流程**:
-1. ContextNode定义函数边界
-2. InputBlockNode接收外部输入
-3. OperationBlockNode执行内部计算
-4. OutputBlockNode返回结果
-5. 普通Node可以连接到ContextNode
 
 ---
 
@@ -88,890 +72,357 @@ ShaderFunctionGraph
 
 ```
 05_ContextBlocks/
-├─ Editor/
-│  ├── ShaderFunctionGraph.cs          # 着色器函数图形
-│  ├── ShaderFunctionImporter.cs       # 资产导入器
-│  ├── Nodes/
-│  │   ├── IShaderNode.cs              # 节点接口
-│  │   ├── FunctionContextNode.cs      # 函数上下文节点（ContextNode）
-│  │   ├── InputBlockNode.cs           # 输入块节点（BlockNode）
-│  │   ├── OutputBlockNode.cs          # 输出块节点（BlockNode）
-│  │   ├── OperationBlockNode.cs       # 操作块节点（BlockNode）
-│  │   └── ConstantNode.cs             # 常量节点（普通Node）
-│  └── Unity.GraphToolkit.Tutorials.ContextBlocks.Editor.asmdef
-└─ Examples/
-    └── (将在Unity编辑器中创建.shaderfunc文件)
+└─ Editor/
+   ├── ShaderFunctionGraph.cs          # [Graph("shaderfunc")] + 求值入口
+   ├── ShaderFunctionData.cs           # ScriptableObject 主资产（导入结果）
+   ├── ShaderFunctionImporter.cs       # ScriptedImporter：.shaderfunc → ShaderFunctionData
+   └── Nodes/
+       ├── FunctionContextNode.cs      # 函数上下文节点（ContextNode）
+       ├── OperationBlockNode.cs       # 运算块：Add / Multiply / Cross / Normalize
+       ├── OutputBlockNode.cs          # 输出节点（普通 Node，打印结果）
+       ├── ConstantNode.cs             # 空文件（使用系统内置黄色常量节点替代）
+       ├── InputBlockNode.cs           # 空文件（由 FunctionContextNode.Input 端口替代）
+       └── IShaderNode.cs              # 空文件（接口已移除）
+```
+
+---
+
+## 图结构
+
+```
+ShaderFunctionGraph
+├─ ConstantNodeModelImp (系统内置黄色常量节点，值 = (1, 0, 0.4))
+│      ↓ wire → FunctionContextNode.Input
+│
+├─ FunctionContextNode  (ContextNode) ── [UseWithGraph]
+│  │   Input  : Vector3  ← 接收外部向量
+│  │   Result : Vector3  → 输出计算结果
+│  │
+│  ├─ CrossBlockNode     (BlockNode)  ── [UseWithContext]  B = (0.5, 1, 1)
+│  ├─ AddBlockNode       (BlockNode)  ── [UseWithContext]  B = (3, -3, 1)
+│  ├─ MultiplyBlockNode  (BlockNode)  ── [UseWithContext]  Factor = 3
+│  └─ NormalizeBlockNode (BlockNode)  ── [UseWithContext]  无端口
+│
+└─ OutputNode (普通 Node) ── [UseWithGraph]
+       Result : Vector3  ← wire ← FunctionContextNode.Result
+```
+
+**数据流（导入时求值）**：
+
+```
+(1, 0, 0.4)                        ← ConstantNodeModelImp，TryGetValue 兜底读取
+  → Cross(B=0.5,1,1)  = (-0.4, -0.8, 1.0)
+  → Add(B=3,-3,1)     = (2.6, -3.8, 2.0)
+  → Multiply(×3)      = (7.8, -11.4, 6.0)
+  → Normalize         ≈ (0.518, -0.757, 0.398)
+  → OutputNode.Evaluate() → Debug.Log
 ```
 
 ---
 
 ## 节点详解
 
-### FunctionContextNode（函数上下文节点）
-
-定义一个自定义函数，可以包含多个BlockNode。
+### ShaderFunctionGraph
 
 ```csharp
-[Node("Function", "Shader")]
-internal class FunctionContextNode : ContextNode, IVectorNode
+[Graph("shaderfunc", GraphOptions.Default)]
+[Serializable]
+public class ShaderFunctionGraph : Graph
 {
-    [SerializeField]
-    private string m_FunctionName = "MyFunction";
+    [MenuItem("Assets/Create/Graph Toolkit/ShaderFunctionGraph")]
+    static void CreateGraphAssetFile()
+        => GraphDatabase.PromptInProjectBrowserToCreateNewAsset<ShaderFunctionGraph>();
 
-    private IPort m_Output;
+    // 新建资产时自动添加 FunctionContextNode
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        EditorApplication.delayCall += EnsureDefaultContent;
+    }
+
+    private void EnsureDefaultContent()
+    {
+        EditorApplication.delayCall -= EnsureDefaultContent;
+        foreach (var node in GetNodes())
+            if (node is FunctionContextNode) return;
+        AddNode(new FunctionContextNode());
+        GraphDatabase.SaveGraph(this);
+        // 注意：SaveGraph 后禁止访问 this（reimport 会销毁内部对象）
+    }
+
+    // 对 output port 求值，优先级：FunctionContextNode > IVariableNode > IConstantNode > TryGetValue 兜底
+    public Vector3 EvaluateVectorPort(IPort port) { ... }
+    public float   EvaluateFloatPort(IPort port)  { ... }
+
+    // 取输入端口连线的上游 output port（inputPort.FirstConnectedPort）
+    public IPort GetConnectedOutputPort(IPort inputPort) { ... }
+}
+```
+
+> **为什么 `OnEnable` 是 `public override`？**
+> `Graph.OnEnable()` 在 DLL 中声明为 `public virtual`，子类必须用 `public override`，
+> 不能用 `protected override`（否则编译报 CS0507）。
+
+### EvaluateVectorPort 求值策略
+
+```csharp
+public Vector3 EvaluateVectorPort(IPort port)
+{
+    var node = FindNodeForPort(port);
+
+    // 1. 用户计算节点 → 调用 EvaluateVector 触发计算
+    if (node is FunctionContextNode fn)
+        return fn.EvaluateVector(this);
+
+    // 2. 图变量节点 → 读取变量默认值
+    if (node is IVariableNode varNode)
+    {
+        varNode.Variable.TryGetDefaultValue(out Vector3 v);
+        return v;
+    }
+
+    // 3. 用户常量节点 → 读取存储值
+    if (node is IConstantNode constNode)
+    {
+        constNode.TryGetValue(out Vector3 v);
+        return v;
+    }
+
+    // 4. 内置黄色常量节点（ConstantNodeModelImp）不在 GetNodes() 中，
+    //    直接对其 output port 调用 TryGetValue 即可读取存储的常量值。
+    port.TryGetValue(out Vector3 fallback);
+    return fallback;
+}
+```
+
+> **关键**：`FunctionContextNode` 必须排在第一位单独处理。它的 Result 是用户定义的 output port，框架不会自动写入计算值，必须显式调用 `EvaluateVector` 才能拿到结果。
+
+### FunctionContextNode（函数上下文节点）
+
+```csharp
+[Node("Function", "")]
+[UseWithGraph(typeof(ShaderFunctionGraph))]
+[Serializable]
+internal class FunctionContextNode : ContextNode
+{
+    private IPort m_Input;   // Vector3，接收外部输入
+    private IPort m_Output;  // Vector3，输出计算结果
 
     protected override void OnDefinePorts(IPortDefinitionContext context)
     {
-        // 函数的输出端口
+        m_Input  = context.AddInputPort<Vector3>("Input").Build();
         m_Output = context.AddOutputPort<Vector3>("Result").Build();
     }
 
-    public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+    public Vector3 EvaluateVector(ShaderFunctionGraph graph)
     {
-        // 评估函数内部的块节点
+        // INPUT 端口的 TryGetValue 只读内联常量，必须走 GetConnectedOutputPort
         Vector3 result = Vector3.zero;
+        var upstream = graph.GetConnectedOutputPort(m_Input);
+        if (upstream != null)
+            result = graph.EvaluateVectorPort(upstream);
+        else
+            m_Input.TryGetValue<Vector3>(out result); // 无连线时读内联常量
 
-        // 查找输出块节点
-        foreach (var block in GetBlocks())
+        // 依次让每个 BlockNode 处理累积值（流水线模式）
+        foreach (var block in BlockNodes)
         {
-            if (block is OutputBlockNode outputBlock)
-            {
-                result = outputBlock.EvaluateVector(null, graph);
-                break;
-            }
+            if      (block is AddBlockNode add)        result = add.Apply(result);
+            else if (block is MultiplyBlockNode mul)   result = mul.Apply(result);
+            else if (block is CrossBlockNode cross)    result = cross.Apply(result);
+            else if (block is NormalizeBlockNode norm) result = norm.Apply(result);
         }
-
         return result;
     }
-
-    /// <summary>
-    /// 获取所有块节点
-    /// </summary>
-    public IReadOnlyList<BlockNode> GetBlocks()
-    {
-        var blocks = new List<BlockNode>();
-        foreach (var node in Graph.Nodes)
-        {
-            if (node is BlockNode block && block.Context == this)
-            {
-                blocks.Add(block);
-            }
-        }
-        return blocks;
-    }
 }
 ```
 
-**关键点**:
-- 继承自`ContextNode`
-- 可以包含多个BlockNode
-- 通过`GetBlocks()`获取所有子块
-- 评估时遍历内部块节点
+### OperationBlockNode（运算块节点）
 
----
-
-### InputBlockNode（输入块节点）
-
-代表函数的输入参数。
+所有运算块遵循同一模式：`Apply(Vector3 accumulated)` 接收上一步的累积值，
+端口参数通过 `TryGetValue` 读取内联常量（未连线时有效）。
 
 ```csharp
-[Node("Input A", "Shader/Block")]
-internal class InputABlockNode : InputBlockNode
+// 向量加法：accumulated + B
+[Node("Add", "")][UseWithContext(typeof(FunctionContextNode))][Serializable]
+internal class AddBlockNode : BlockNode
 {
-    [SerializeField]
-    private Vector3 m_DefaultValue = Vector3.zero;
-
-    /// <summary>
-    /// 所属的上下文节点
-    /// </summary>
-    public FunctionContextNode Context
+    private IPort m_B;
+    protected override void OnDefinePorts(IPortDefinitionContext context)
+        => m_B = context.AddInputPort<Vector3>("B").Build();
+    public Vector3 Apply(Vector3 accumulated)
     {
-        get
-        {
-            // 查找父ContextNode
-            foreach (var node in Graph.Nodes)
-            {
-                if (node is FunctionContextNode context)
-                {
-                    foreach (var block in context.GetBlocks())
-                    {
-                        if (block == this)
-                            return context;
-                    }
-                }
-            }
-            return null;
-        }
+        Vector3 b = Vector3.zero;
+        m_B.TryGetValue<Vector3>(out b);
+        return accumulated + b;
     }
+}
 
-    public override Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+// 标量乘法：accumulated * Factor
+[Node("Multiply", "")][UseWithContext(typeof(FunctionContextNode))][Serializable]
+internal class MultiplyBlockNode : BlockNode
+{
+    private IPort m_Factor;
+    protected override void OnDefinePorts(IPortDefinitionContext context)
+        => m_Factor = context.AddInputPort<float>("Factor").Build();
+    public Vector3 Apply(Vector3 accumulated)
     {
-        // 返回默认值或从外部传入的值
-        return m_DefaultValue;
+        float f = 1f;
+        m_Factor.TryGetValue<float>(out f);
+        return accumulated * f;
     }
+}
+
+// 向量叉积：Cross(accumulated, B)
+[Node("Cross", "")][UseWithContext(typeof(FunctionContextNode))][Serializable]
+internal class CrossBlockNode : BlockNode { ... }
+
+// 归一化：accumulated.normalized（无端口）
+[Node("Normalize", "")][UseWithContext(typeof(FunctionContextNode))][Serializable]
+internal class NormalizeBlockNode : BlockNode
+{
+    public Vector3 Apply(Vector3 accumulated) => accumulated.normalized;
 }
 ```
 
-**关键点**:
-- 继承自`BlockNode`
-- 必须有父ContextNode
-- 代表函数参数
-- 可以有默认值
+> BlockNode 的 `Apply` 方法接收的 `accumulated`：
+> - **第 1 个 BlockNode** → 收到的是 `FunctionContextNode.Input` 的值
+> - **第 N 个 BlockNode** → 收到的是第 N-1 个块的输出
 
----
+### OutputNode（输出节点）
 
-### OutputBlockNode（输出块节点）
-
-定义函数的返回值。
+`OutputNode` 是普通 `Node`（不是 BlockNode），放在图中接收 `FunctionContextNode.Result` 并打印。
 
 ```csharp
-[Node("Output", "Shader/Block")]
-internal class OutputBlockNode : BlockNode, IVectorNode
+[Node("Output", "")]
+[UseWithGraph(typeof(ShaderFunctionGraph))]
+[Serializable]
+internal class OutputNode : Node
 {
     private IPort m_Input;
 
     protected override void OnDefinePorts(IPortDefinitionContext context)
-    {
-        m_Input = context.AddInputPort<Vector3>("Result").Build();
-    }
+        => m_Input = context.AddInputPort<Vector3>("Result").Build();
 
-    public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+    public void Evaluate(ShaderFunctionGraph graph)
     {
-        // 评估输入端口
-        var connectedPort = graph.GetConnectedOutputPort(m_Input);
-        if (connectedPort != null)
-        {
-            return graph.EvaluateVectorPort(connectedPort);
-        }
-
-        return Vector3.zero;
+        // 必须走 GetConnectedOutputPort，不能直接 TryGetValue（只读内联常量）
+        Vector3 result = Vector3.zero;
+        var upstream = graph.GetConnectedOutputPort(m_Input);
+        if (upstream != null)
+            result = graph.EvaluateVectorPort(upstream);
+        else
+            m_Input.TryGetValue<Vector3>(out result);
+        Debug.Log($"[ShaderFunction] Result = {result}");
     }
 }
 ```
 
-**关键点**:
-- 只有输入端口
-- 评估连接的节点
-- 将结果返回给ContextNode
-
----
-
-### OperationBlockNode（操作块节点）
-
-在函数内部执行计算。
+### ShaderFunctionImporter
 
 ```csharp
-[Node("Add", "Shader/Block")]
-internal class AddBlockNode : BlockNode, IVectorNode
+[ScriptedImporter(1, "shaderfunc")]
+internal class ShaderFunctionImporter : ScriptedImporter
 {
-    private IPort m_InputA;
-    private IPort m_InputB;
-    private IPort m_Output;
-
-    protected override void OnDefinePorts(IPortDefinitionContext context)
+    public override void OnImportAsset(AssetImportContext ctx)
     {
-        m_InputA = context.AddInputPort<Vector3>("A").Build();
-        m_InputB = context.AddInputPort<Vector3>("B").Build();
-        m_Output = context.AddOutputPort<Vector3>("Result").Build();
-    }
+        var graph = GraphDatabase.LoadGraphForImporter<ShaderFunctionGraph>(ctx.assetPath);
 
-    public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
-    {
-        Vector3 a = EvaluateInput(m_InputA, graph);
-        Vector3 b = EvaluateInput(m_InputB, graph);
-        return a + b;
+        var data = ScriptableObject.CreateInstance<ShaderFunctionData>();
+        data.name = data.functionName = Path.GetFileNameWithoutExtension(ctx.assetPath);
+
+        if (graph != null)
+        {
+            // 统计 BlockNode 数量（使用框架内置 BlockCount）
+            var fnCtx = graph.FindFunctionContext();
+            if (fnCtx != null)
+                data.blockCount = fnCtx.BlockCount;
+
+            // 触发求值并打印结果
+            foreach (var node in graph.GetNodes())
+            {
+                if (node is OutputNode output)
+                {
+                    output.Evaluate(graph);
+                    break;
+                }
+            }
+        }
+
+        ctx.AddObjectToAsset("main", data);
+        ctx.SetMainObject(data);
+        // 注意：Graph 不是 UnityEngine.Object，不能 AddObjectToAsset(graph)
     }
 }
 ```
-
-**关键点**:
-- 有输入和输出端口
-- 执行具体的计算
-- 可以连接其他BlockNode
 
 ---
 
 ## 实践步骤
 
-### 示例1: 简单的向量加法函数
-
-创建一个函数：`Result = A + B`
-
-**步骤**:
-1. 创建.shaderfunc文件
-2. 添加FunctionContextNode
-3. 在ContextNode内部添加：
-   - InputABlockNode
-   - InputBBlockNode
-   - AddBlockNode
-   - OutputBlockNode
-4. 连接：
-   - InputA → Add的A端口
-   - InputB → Add的B端口
-   - Add → Output
-5. 保存并查看评估结果
-
-**图形结构**:
-```
-[Function Context]
-  ├─ [Input A] ─┐
-  │             ├─> [Add] ─> [Output]
-  └─ [Input B] ─┘
-```
-
----
-
-### 示例2: 复杂的向量运算
-
-创建一个函数：`Result = Normalize((A + B) * C)`
-
-**步骤**:
-1. 在FunctionContextNode内部添加：
-   - InputABlockNode
-   - InputBBlockNode
-   - InputCBlockNode (需要创建)
-   - AddBlockNode
-   - MultiplyBlockNode
-   - NormalizeBlockNode
-   - OutputBlockNode
-2. 连接：
-   - InputA → Add的A
-   - InputB → Add的B
-   - Add → Multiply的A
-   - InputC → Multiply的B
-   - Multiply → Normalize
-   - Normalize → Output
-
-**图形结构**:
-```
-[Function Context]
-  ├─ [Input A] ─┐
-  │             ├─> [Add] ─> [Multiply] ─> [Normalize] ─> [Output]
-  ├─ [Input B] ─┘              ↑
-  └─ [Input C] ────────────────┘
-```
-
----
-
-## 作用域和封装
-
-### 作用域隔离
-
-BlockNode只能访问同一个ContextNode内的其他节点：
-
-```csharp
-// ✅ 正确 - 同一个ContextNode内的连接
-[Function Context A]
-  [Input A] → [Add] → [Output]
-
-// ❌ 错误 - 不能跨ContextNode连接
-[Function Context A]
-  [Input A] ─┐
-             X (不允许)
-[Function Context B]  │
-  [Add] ←─────────────┘
-```
-
-### 封装优势
-
-1. **模块化**: 函数内部实现对外部隐藏
-2. **复用**: 可以创建多个相同的ContextNode实例
-3. **清晰性**: 逻辑分组，易于理解
-4. **维护性**: 修改内部实现不影响外部
-
----
-
-## 与Shader Graph的对比
-
-### Shader Graph的Custom Function
-
-```
-Custom Function Node
-├─ Inputs (参数)
-├─ Body (HLSL代码)
-└─ Outputs (返回值)
-```
-
-### GraphToolkit的ContextNode
-
-```
-FunctionContextNode
-├─ InputBlockNodes (参数)
-├─ OperationBlockNodes (计算逻辑)
-└─ OutputBlockNode (返回值)
-```
-
-**相似之处**:
-- 都提供函数封装
-- 都有输入和输出
-- 都可以复用
-
-**不同之处**:
-- Shader Graph使用代码，GraphToolkit使用节点
-- Shader Graph编译为Shader，GraphToolkit在编辑器评估
-- GraphToolkit更灵活，可以动态修改
-
----
-
-## 高级用法
-
-### 嵌套ContextNode
-
-理论上可以在ContextNode内部创建另一个ContextNode（如果GraphToolkit支持）：
-
-```
-[Outer Function Context]
-  ├─ [Input A]
-  ├─ [Inner Function Context]
-  │  ├─ [Input X]
-  │  ├─ [Add]
-  │  └─ [Output Y]
-  └─ [Output]
-```
-
-### 条件执行
-
-结合BranchNode实现条件函数：
-
-```
-[Function Context]
-  ├─ [Input Condition]
-  ├─ [Branch]
-  │  ├─ True → [Operation A]
-  │  └─ False → [Operation B]
-  └─ [Output]
-```
-
----
-
-## 练习题
-
-### 练习1: 向量点积函数
-创建一个计算两个向量点积的函数。
-
-**提示**:
-```
-Dot(A, B) = A.x * B.x + A.y * B.y + A.z * B.z
-```
-
-需要的BlockNode:
-- 2个InputBlockNode
-- 3个MultiplyBlockNode
-- 2个AddBlockNode
-- 1个OutputBlockNode
-
-### 练习2: 向量插值函数
-创建一个向量线性插值函数：`Lerp(A, B, t) = A + (B - A) * t`
-
-### 练习3: 自定义光照函数
-创建一个简单的Lambert光照计算函数。
+1. 右键 → **Create → Graph Toolkit → ShaderFunctionGraph**，命名为 `MyFunction`
+2. 双击打开，图中已自动出现 `FunctionContextNode`
+3. 在图中添加 **黄色常量节点**（右键 → Create Node → Constant），设置值，连接到 `FunctionContextNode.Input`
+4. 在 `FunctionContextNode` 内添加 BlockNode（右键 → Operation）：
+   - 依次添加 Cross、Add、Multiply、Normalize
+   - 在每个块的 Input 端口填写常量值
+5. 在图中添加 `OutputNode`，连接 `FunctionContextNode.Result → OutputNode.Result`
+6. 保存，查看 Console 输出结果
 
 ---
 
 ## 常见问题
 
-### Q: BlockNode可以独立存在吗？
-A: 不可以。BlockNode必须属于某个ContextNode，否则会报错。
+### Q: 为什么 `TryGetValue` 读出来是 `(0,0,0)`？
 
-### Q: 如何在代码中创建BlockNode？
-A: 
-```csharp
-var contextNode = graph.AddNode<FunctionContextNode>();
-var blockNode = graph.AddNode<InputABlockNode>();
-// BlockNode会自动关联到最近的ContextNode
-```
+A: `IPort.TryGetValue<T>()` 在 **INPUT 端口** 上只读编辑器内联常量（`m_InputConstantsById`），
+不会沿连线读上游节点的值。
+- 如果端口有连线，必须用 `GetConnectedOutputPort(port)` 取到上游 output port，再调用 `EvaluateVectorPort`。
+- 对于系统内置黄色常量节点（`ConstantNodeModelImp`）的 **output port**，直接调用 `TryGetValue` 则可以读到正确值。
 
-### Q: ContextNode可以嵌套吗？
-A: 理论上可以，但需要GraphToolkit的支持。当前版本可能有限制。
+### Q: `Graph.GetNodes()` 找不到 BlockNode？
 
-### Q: BlockNode可以有子图吗？
-A: 可以，BlockNode也可以实现ISubgraphNode接口。
+A: 框架设计如此，`BlockNode` 不在主图节点列表中。
+必须通过父 ContextNode 的 `BlockNodes` 属性访问。
 
-### Q: 如何调试ContextNode内部的执行？
-A: 在BlockNode的Evaluate方法中添加Debug.Log，追踪执行流程。
+### Q: BlockNode 用 `[UseWithGraph]` 还是 `[UseWithContext]`？
+
+A: `BlockNode` 必须用 `[UseWithContext(typeof(MyContextNode))]`，否则它不会出现在对应 ContextNode 的添加菜单中。
+
+### Q: `Graph.OnEnable()` 为何要写成 `public override`？
+
+A: DLL 中 `Graph.OnEnable()` 声明为 `public virtual`，子类必须保持访问修饰符一致（`public override`），写成 `protected override` 会报 **CS0507**。
+
+### Q: 为什么不能 `AddObjectToAsset("graph", graph)`？
+
+A: `Graph` 不继承 `UnityEngine.Object`，无法作为 Unity 子资产附加到导入结果。需另建一个 `ScriptableObject`（如 `ShaderFunctionData`）作为主资产。
 
 ---
 
-## 最佳实践
+## API 速查
 
-### 1. 合理使用ContextNode
-
-**✅ 适合使用ContextNode的场景**:
-- 复杂的计算逻辑需要封装
-- 需要创建可复用的函数
-- 需要隔离作用域
-
-**❌ 不适合使用ContextNode的场景**:
-- 简单的单节点操作
-- 不需要封装的线性流程
-
-### 2. BlockNode命名规范
-
-```csharp
-// ✅ 好的命名
-[Node("Input Position", "Shader/Block")]
-[Node("Calculate Normal", "Shader/Block")]
-[Node("Output Color", "Shader/Block")]
-
-// ❌ 避免的命名
-[Node("Block1", "Shader/Block")]
-[Node("Node", "Shader/Block")]
-```
-
-### 3. 验证ContextNode完整性
-
-```csharp
-protected override void OnValidate()
-{
-    base.OnValidate();
-
-    // 确保有输出块
-    var outputBlock = FindOutputBlock();
-    if (outputBlock == null)
-    {
-        Debug.LogWarning($"Function '{m_FunctionName}' has no output block");
-    }
-
-    // 确保有至少一个输入块
-    var inputBlocks = GetBlocks().OfType<InputBlockNode>();
-    if (!inputBlocks.Any())
-    {
-        Debug.LogWarning($"Function '{m_FunctionName}' has no input blocks");
-    }
-}
-```
-
-### 4. 性能考虑
-
-- ContextNode的评估会遍历所有BlockNode
-- 避免创建过深的嵌套结构
-- 缓存评估结果（如果需要）
+| 场景 | 正确写法 |
+|------|---------|
+| 定义块节点关联 | `[UseWithContext(typeof(FunctionContextNode))]` |
+| 遍历子块 | `contextNode.BlockNodes` |
+| 读取内联常量 | `inputPort.TryGetValue<T>(out v)` |
+| 读取连线上游值 | `graph.GetConnectedOutputPort(inputPort)` → `EvaluateVectorPort` |
+| 读取内置常量节点值 | `outputPort.TryGetValue<T>(out v)`（对 output port 有效） |
+| 获取父上下文 | `blockNode.ContextNode`（框架内置） |
+| 获取块数量 | `contextNode.BlockCount` |
 
 ---
 
 ## 总结
 
-ContextNode和BlockNode是GraphToolkit中最高级的特性：
-
-**ContextNode**:
-- 作为节点容器
-- 提供作用域隔离
-- 实现函数封装
-
-**BlockNode**:
-- 只能在ContextNode内部
-- 实现函数内部逻辑
-- 支持输入、输出、操作等类型
-
-**应用场景**:
-- 自定义Shader函数
-- 复杂的数学运算
-- 可复用的逻辑模块
-
-掌握这些特性后，你可以创建更加模块化和可维护的图形系统！
-
----
+| 特性 | 实现方式 |
+|------|---------|
+| 函数容器 | `FunctionContextNode`（ContextNode），有 Input/Result 端口 |
+| 运算步骤 | BlockNode 的 `Apply(accumulated)` 流水线，顺序累积 |
+| 常量输入 | 系统内置黄色常量节点，无需自定义 |
+| 连线求值 | `GetConnectedOutputPort + EvaluateVectorPort`（不能直接 TryGetValue） |
+| 资产导出 | `ShaderFunctionData`（ScriptableObject），存 `functionName` + `blockCount` |
 
 ## 下一步
 
-在下一个教程中，我们将学习如何自定义GraphView UI，创建专业的图形编辑器界面。
-
----
-
-**Sources**:
-- [Unity GraphToolkit Documentation](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.html)
-= InputA + InputB`
-
-**步骤**:
-1. 创建.shaderfunc文件
-2. 添加FunctionContextNode
-3. 在函数内部添加：
-   - InputABlockNode
-   - InputBBlockNode
-   - AddBlockNode
-   - OutputBlockNode
-4. 连接：
-   - InputA → Add的A端口
-   - InputB → Add的B端口
-   - Add → Output
-5. 保存并查看评估结果
-
-### 示例2: 复杂的向量运算
-
-创建函数：`Result = Normalize((InputA + InputB) * InputA)`
-
-```
-[InputA] ─┐
-          ├─> [Add] ─┐
-[InputB] ─┘          ├─> [Multiply] ─> [Normalize] ─> [Output]
-                     │
-[InputA] ────────────┘
-```
-
-**步骤**:
-1. 添加FunctionContextNode
-2. 添加块节点：
-   - 2个InputABlockNode（可以复用）
-   - 1个InputBBlockNode
-   - 1个AddBlockNode
-   - 1个MultiplyBlockNode
-   - 1个NormalizeBlockNode
-   - 1个OutputBlockNode
-3. 按照上图连接
-4. 评估函数
-
-### 示例3: 多个函数
-
-在同一个图形中创建多个函数：
-
-```
-ShaderFunctionGraph
-├─ Function1 (ContextNode)
-│  ├─ Input blocks
-│  ├─ Operation blocks
-│  └─ Output block
-└─ Function2 (ContextNode)
-   ├─ Input blocks
-   ├─ Operation blocks
-   └─ Output block
-```
-
-**注意**: 每个ContextNode是独立的作用域，BlockNode不能跨越。
-
----
-
-## 作用域和封装
-
-### 作用域规则
-
-```csharp
-// BlockNode只能访问：
-// 1. 同一个ContextNode内的其他BlockNode
-// 2. 图形中的普通Node（通过端口连接）
-
-// BlockNode不能访问：
-// 1. 其他ContextNode内的BlockNode
-// 2. 其他ContextNode本身（除非通过端口）
-```
-
-### 封装示例
-
-```
-Function Context
-┌─────────────────────────────────┐
-│ [Input A] ─┐                    │
-│            ├─> [Add] ─> [Output]│ ─> 外部可以访问
-│ [Input B] ─┘                    │
-└─────────────────────────────────┘
-     ↑                    ↑
-     │                    │
-  外部输入            内部实现被封装
-```
-
-**优势**:
-- 隐藏实现细节
-- 提供清晰的接口
-- 便于复用和维护
-
----
-
-## 与Shader Graph的对比
-
-### Shader Graph的Custom Function
-
-```
-Custom Function Node
-├─ Inputs (参数)
-├─ Body (HLSL代码)
-└─ Outputs (返回值)
-```
-
-### GraphToolkit的ContextNode
-
-```
-ContextNode
-├─ InputBlockNode (参数)
-├─ OperationBlockNode (逻辑)
-└─ OutputBlockNode (返回值)
-```
-
-**相似之处**:
-- 都提供函数封装
-- 都有输入和输出
-- 都隐藏内部实现
-
-**不同之处**:
-- Shader Graph使用代码（HLSL）
-- GraphToolkit使用可视化节点
-- GraphToolkit更灵活，可以动态修改
-
----
-
-## 高级用法
-
-### 1. 嵌套ContextNode
-
-理论上可以嵌套ContextNode（ContextNode包含另一个ContextNode），但GraphToolkit当前版本可能不支持。
-
-```csharp
-// 未来可能的用法
-OuterContextNode
-└─ InnerContextNode (BlockNode)
-   └─ BlockNodes
-```
-
-### 2. 动态创建BlockNode
-
-```csharp
-// 在ContextNode中动态添加BlockNode
-public void AddOperationBlock()
-{
-    var block = Graph.AddNode<AddBlockNode>();
-    // 将block关联到this ContextNode
-}
-```
-
-### 3. BlockNode之间的通信
-
-```csharp
-// BlockNode可以通过端口连接
-[InputA] → [Operation1] → [Operation2] → [Output]
-
-// 也可以通过共享的ContextNode数据
-public class FunctionContextNode : ContextNode
-{
-    private Dictionary<string, object> m_SharedData;
-    
-    public void SetSharedData(string key, object value)
-    {
-        m_SharedData[key] = value;
-    }
-}
-```
-
----
-
-## 练习题
-
-### 练习1: 点积函数
-创建一个计算两个向量点积的函数。
-
-**提示**:
-```csharp
-// 点积公式: dot(A, B) = A.x * B.x + A.y * B.y + A.z * B.z
-// 需要的块节点:
-// - 2个InputBlockNode
-// - 3个MultiplyBlockNode
-// - 2个AddBlockNode
-// - 1个OutputBlockNode
-```
-
-### 练习2: 条件函数
-创建一个根据条件选择不同输入的函数。
-
-**提示**:
-```csharp
-// 伪代码: Result = condition ? InputA : InputB
-// 需要添加条件判断的BlockNode
-```
-
-### 练习3: 循环函数
-创建一个执行多次操作的函数。
-
-**提示**:
-```csharp
-// 伪代码: for (int i = 0; i < count; i++) { result += input; }
-// 需要添加循环控制的BlockNode
-```
-
----
-
-## 常见问题
-
-### Q: BlockNode和普通Node有什么区别？
-
-A: 
-- **BlockNode**: 只能在ContextNode内部，提供封装和作用域
-- **普通Node**: 可以在图形的任何地方，独立存在
-
-### Q: 为什么需要ContextNode？
-
-A: 
-1. **封装**: 隐藏实现细节
-2. **复用**: 创建可复用的函数
-3. **组织**: 更好地组织复杂图形
-4. **作用域**: 提供变量和数据的作用域
-
-### Q: 可以在BlockNode中创建子图吗？
-
-A: 可以，BlockNode可以实现ISubgraphNode接口，引用其他图形。
-
-### Q: ContextNode可以嵌套吗？
-
-A: 理论上可以，但当前版本的GraphToolkit可能不完全支持。需要测试具体行为。
-
-### Q: 如何调试ContextNode内部的执行？
-
-A: 
-```csharp
-public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
-{
-    Debug.Log($"Evaluating function: {m_FunctionName}");
-    
-    foreach (var block in GetBlocks())
-    {
-        Debug.Log($"Block: {block.Name}");
-    }
-    
-    // 评估逻辑...
-}
-```
-
-### Q: BlockNode可以访问外部节点吗？
-
-A: 可以，通过端口连接。BlockNode的端口可以连接到图形中的任何节点（包括ContextNode外部的普通节点）。
-
----
-
-## 最佳实践
-
-### 1. 清晰的命名
-
-```csharp
-// ✅ 好的命名
-[Node("Calculate Normal", "Shader")]
-internal class CalculateNormalContextNode : ContextNode { }
-
-[Node("Tangent Input", "Shader/Block")]
-internal class TangentInputBlockNode : BlockNode { }
-
-// ❌ 避免的命名
-[Node("Node1", "Shader")]
-internal class Node1 : ContextNode { }
-```
-
-### 2. 验证BlockNode的父节点
-
-```csharp
-protected override void OnValidate()
-{
-    base.OnValidate();
-    
-    var context = Context;
-    if (context == null)
-    {
-        Debug.LogError($"BlockNode '{Name}' has no parent ContextNode!");
-    }
-}
-```
-
-### 3. 限制BlockNode的数量
-
-```csharp
-public class FunctionContextNode : ContextNode
-{
-    private const int MaxBlocks = 20;
-    
-    protected override void OnValidate()
-    {
-        if (GetBlocks().Count > MaxBlocks)
-        {
-            Debug.LogWarning($"Function has too many blocks ({GetBlocks().Count})");
-        }
-    }
-}
-```
-
-### 4. 提供默认的BlockNode
-
-```csharp
-protected override void OnEnable()
-{
-    base.OnEnable();
-    
-    // 自动创建输入和输出块
-    if (GetBlocks().Count == 0)
-    {
-        Graph.AddNode<InputABlockNode>();
-        Graph.AddNode<OutputBlockNode>();
-    }
-}
-```
-
----
-
-## 性能考虑
-
-### 1. 避免过深的嵌套
-
-```csharp
-// ❌ 避免
-ContextNode1
-└─ ContextNode2
-   └─ ContextNode3
-      └─ ContextNode4 (太深)
-
-// ✅ 推荐
-ContextNode1
-├─ BlockNodes
-└─ BlockNodes
-```
-
-### 2. 缓存BlockNode列表
-
-```csharp
-private List<BlockNode> m_CachedBlocks;
-
-public IReadOnlyList<BlockNode> GetBlocks()
-{
-    if (m_CachedBlocks == null)
-    {
-        m_CachedBlocks = new List<BlockNode>();
-        // 填充列表...
-    }
-    return m_CachedBlocks;
-}
-```
-
-### 3. 优化评估顺序
-
-```csharp
-// 按依赖关系排序BlockNode
-public void SortBlocksByDependency()
-{
-    var sorted = new List<BlockNode>();
-    var visited = new HashSet<BlockNode>();
-    
-    foreach (var block in GetBlocks())
-    {
-        TopologicalSort(block, visited, sorted);
-    }
-    
-    m_CachedBlocks = sorted;
-}
-```
-
----
-
-## 总结
-
-ContextNode和BlockNode是GraphToolkit中最高级的特性：
-
-1. **ContextNode**: 提供作用域和封装
-2. **BlockNode**: 只能在ContextNode内部
-3. **作用域**: 清晰的边界和隔离
-4. **封装**: 隐藏实现细节
-5. **复用**: 创建可复用的函数模块
-
-这些特性让你能够构建复杂的、模块化的图形系统，类似于Shader Graph的自定义函数节点。
-
----
-
-## 下一步
-
-在下一个教程中，我们将学习如何自定义GraphView UI，创建专业的图形编辑器界面。
-
----
-
-**Sources**:
-- [Unity GraphToolkit Documentation](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.html)
+教程6将介绍**自定义 UI**，学习如何为节点创建自定义 Inspector 和图形编辑器界面。
