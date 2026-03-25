@@ -4,11 +4,11 @@ using UnityEngine;
 namespace GraphToolkitTutorials.BehaviorTree
 {
     /// <summary>
-    /// 反转节点 - 反转子节点的结果
-    /// 成功变失败，失败变成功
+    /// 反转节点 — 反转子节点的结果：成功变失败，失败变成功
     /// </summary>
-    [Node("Inverter", "Behavior Tree/Decorator")]
+    [Node("Decorator", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class InverterNode : DecoratorNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -19,34 +19,24 @@ namespace GraphToolkitTutorials.BehaviorTree
 
         public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
         {
-            var runtimeNode = new Runtime.InverterNode();
-
             var child = GetChild(graph);
-            if (child != null)
+            return new Runtime.InverterNode
             {
-                runtimeNode.childIndex = child.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.childIndex = -1;
-            }
-
-            return runtimeNode;
+                childIndex = child != null ? child.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 重复节点 - 重复执行子节点指定次数
+    /// 重复节点 — 重复执行子节点指定次数
     /// </summary>
-    [Node("Repeater", "Behavior Tree/Decorator")]
+    [Node("Decorator", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class RepeaterNode : DecoratorNode
     {
-        [SerializeField]
-        private int m_RepeatCount = 3;
-
-        [SerializeField]
-        private bool m_InfiniteLoop = false;
+        private INodeOption m_RepeatCountOption;
+        private INodeOption m_InfiniteLoopOption;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
@@ -54,39 +44,37 @@ namespace GraphToolkitTutorials.BehaviorTree
             AddChildPort(context);
         }
 
-        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
-        {
-            var runtimeNode = new Runtime.RepeaterNode
-            {
-                repeatCount = m_RepeatCount,
-                infiniteLoop = m_InfiniteLoop
-            };
-
-            var child = GetChild(graph);
-            if (child != null)
-            {
-                runtimeNode.childIndex = child.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.childIndex = -1;
-            }
-
-            return runtimeNode;
-        }
-
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Repeat Count", () => m_RepeatCount, v => m_RepeatCount = Mathf.Max(1, v)).Build();
-            context.AddOption("Infinite Loop", () => m_InfiniteLoop, v => m_InfiniteLoop = v).Build();
+            m_RepeatCountOption  = context.AddOption<int>("Repeat Count").Build();
+            m_InfiniteLoopOption = context.AddOption<bool>("Infinite Loop").Build();
+        }
+
+        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
+        {
+            int repeatCount = 3;
+            m_RepeatCountOption?.TryGetValue(out repeatCount);
+            repeatCount = Mathf.Max(1, repeatCount);
+
+            bool infiniteLoop = false;
+            m_InfiniteLoopOption?.TryGetValue(out infiniteLoop);
+
+            var child = GetChild(graph);
+            return new Runtime.RepeaterNode
+            {
+                repeatCount  = repeatCount,
+                infiniteLoop = infiniteLoop,
+                childIndex   = child != null ? child.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 成功节点 - 总是返回成功
+    /// 成功节点 — 总是返回成功（忽略子节点结果）
     /// </summary>
-    [Node("Succeeder", "Behavior Tree/Decorator")]
+    [Node("Decorator", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class SucceederNode : DecoratorNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -97,34 +85,24 @@ namespace GraphToolkitTutorials.BehaviorTree
 
         public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
         {
-            var runtimeNode = new Runtime.SucceederNode();
-
             var child = GetChild(graph);
-            if (child != null)
+            return new Runtime.SucceederNode
             {
-                runtimeNode.childIndex = child.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.childIndex = -1;
-            }
-
-            return runtimeNode;
+                childIndex = child != null ? child.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 条件装饰节点 - 根据黑板变量决定是否执行子节点
+    /// 条件装饰节点 — 根据黑板变量决定是否执行子节点
     /// </summary>
     [Node("Conditional", "Behavior Tree/Decorator")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class ConditionalNode : DecoratorNode
     {
-        [SerializeField]
-        private string m_BlackboardKey = "condition";
-
-        [SerializeField]
-        private bool m_ExpectedValue = true;
+        private INodeOption m_BlackboardKeyOption;
+        private INodeOption m_ExpectedValueOption;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
@@ -132,34 +110,27 @@ namespace GraphToolkitTutorials.BehaviorTree
             AddChildPort(context);
         }
 
-        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
-        {
-            var runtimeNode = new Runtime.ConditionalNode
-            {
-                blackboardKey = m_BlackboardKey,
-                expectedValue = m_ExpectedValue
-            };
-
-            var child = GetChild(graph);
-            if (child != null)
-            {
-                runtimeNode.childIndex = child.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.childIndex = -1;
-            }
-
-            return runtimeNode;
-        }
-
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Blackboard Key", () => m_BlackboardKey, v => m_BlackboardKey = v)
-                .Delayed()
-                .Build();
+            m_BlackboardKeyOption  = context.AddOption<string>("Blackboard Key").Delayed().Build();
+            m_ExpectedValueOption  = context.AddOption<bool>("Expected Value").Build();
+        }
 
-            context.AddOption("Expected Value", () => m_ExpectedValue, v => m_ExpectedValue = v).Build();
+        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
+        {
+            string blackboardKey = "condition";
+            m_BlackboardKeyOption?.TryGetValue(out blackboardKey);
+
+            bool expectedValue = true;
+            m_ExpectedValueOption?.TryGetValue(out expectedValue);
+
+            var child = GetChild(graph);
+            return new Runtime.ConditionalNode
+            {
+                blackboardKey = blackboardKey ?? "condition",
+                expectedValue = expectedValue,
+                childIndex    = child != null ? child.GetNodeIndex(graph) : -1
+            };
         }
     }
 }

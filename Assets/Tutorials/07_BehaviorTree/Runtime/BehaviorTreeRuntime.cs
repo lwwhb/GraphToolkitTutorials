@@ -23,5 +23,10 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
                 return nodes[index];
             return null;
         }
+
+        public RootNode GetRootNode()
+        {
+            return GetNode<RootNode>(rootNodeIndex);
+        }
     }
 }
