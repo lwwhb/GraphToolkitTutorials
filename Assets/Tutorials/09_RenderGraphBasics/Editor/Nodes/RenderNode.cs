@@ -1,6 +1,6 @@
+using System;
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 namespace GraphToolkitTutorials.RenderGraphBasics
 {
@@ -8,20 +8,17 @@ namespace GraphToolkitTutorials.RenderGraphBasics
     /// 渲染节点基类
     /// 所有渲染节点都继承自此类
     /// </summary>
+    [Serializable]
     internal abstract class RenderNode : Node
     {
-        /// <summary>
-        /// 执行输入端口
-        /// </summary>
+        /// <summary>执行输入端口</summary>
         protected IPort m_ExecutionIn;
 
-        /// <summary>
-        /// 执行输出端口
-        /// </summary>
+        /// <summary>执行输出端口</summary>
         protected IPort m_ExecutionOut;
 
         /// <summary>
-        /// 添加执行端口
+        /// 添加执行流端口（In / Out）
         /// </summary>
         protected void AddExecutionPorts(IPortDefinitionContext context)
         {
@@ -35,15 +32,14 @@ namespace GraphToolkitTutorials.RenderGraphBasics
         }
 
         /// <summary>
-        /// 获取下一个节点
+        /// 获取执行流的下一个节点
         /// </summary>
         public RenderNode GetNextNode(RenderGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_ExecutionOut);
-            if (connectedPort != null && connectedPort.Node is RenderNode renderNode)
-            {
-                return renderNode;
-            }
+            // IPort 没有 .Node 属性，必须用 graph.FindNodeForPort
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is RenderNode rn)
+                return rn;
             return null;
         }
 
@@ -57,7 +53,10 @@ namespace GraphToolkitTutorials.RenderGraphBasics
         /// </summary>
         public int GetNodeIndex(RenderGraph graph)
         {
-            return graph.GetNodes().IndexOf(this);
+            var allNodes = new List<INode>(graph.GetNodes());
+            for (int i = 0; i < allNodes.Count; i++)
+                if (allNodes[i] == this) return i;
+            return -1;
         }
     }
 }
