@@ -2,7 +2,8 @@
     "name": "Unity.GraphToolkit.Tutorials.DialogueSystem.Runtime",
     "rootNamespace": "GraphToolkitTutorials.DialogueSystem.Runtime",
     "references": [
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

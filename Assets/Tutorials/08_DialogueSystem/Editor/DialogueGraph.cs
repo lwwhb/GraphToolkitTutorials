@@ -1,72 +1,68 @@
+using System;
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
+using UnityEditor;
 
 namespace GraphToolkitTutorials.DialogueSystem
 {
     /// <summary>
     /// 对话图形 - 实战项目：完整的对话系统
-    /// 演示如何使用GraphToolkit构建生产级的对话系统
+    /// 演示如何使用GraphToolkit构建生产级的对话系统。
+    /// 范式：执行流（Push），Editor/Runtime 分离。
+    /// 文件扩展名：.dialogue
     /// </summary>
-    [Graph("dialogue", GraphOptions.None)]
+    [Graph("dialogue", GraphOptions.Default)]
+    [Serializable]
     internal class DialogueGraph : Graph
     {
+        [MenuItem("Assets/Create/Graph Toolkit/Dialogue Graph")]
+        static void CreateGraphAssetFile()
+            => GraphDatabase.PromptInProjectBrowserToCreateNewAsset<DialogueGraph>();
+
         /// <summary>
         /// 查找起始节点
         /// </summary>
         public StartDialogueNode FindStartNode()
         {
             foreach (var node in GetNodes())
-            {
                 if (node is StartDialogueNode startNode)
-                {
                     return startNode;
-                }
+            return null;
+        }
+
+        /// <summary>
+        /// 根据端口查找所属节点
+        /// </summary>
+        public INode FindNodeForPort(IPort port)
+        {
+            foreach (var node in GetNodes())
+            {
+                foreach (var p in node.GetInputPorts())
+                    if (p == port) return node;
+                foreach (var p in node.GetOutputPorts())
+                    if (p == port) return node;
             }
             return null;
         }
 
         /// <summary>
-        /// 获取连接到输入端口的输出端口
+        /// 获取连接到输入端口的上游输出端口
         /// </summary>
         public IPort GetConnectedOutputPort(IPort inputPort)
         {
             if (inputPort == null || inputPort.Direction != PortDirection.Input)
                 return null;
-
-            foreach (var connection in Connections)
-            {
-                if (connection.InputPort == inputPort)
-                    return connection.OutputPort;
-            }
-
-            return null;
+            return inputPort.FirstConnectedPort;
         }
 
         /// <summary>
-        /// 获取连接到输出端口的输入端口
+        /// 获取连接到输出端口的下游输入端口（单连接）
         /// </summary>
         public IPort GetConnectedInputPort(IPort outputPort)
         {
             if (outputPort == null || outputPort.Direction != PortDirection.Output)
                 return null;
-
-            foreach (var connection in Connections)
-            {
-                if (connection.OutputPort == outputPort)
-                    return connection.InputPort;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// 创建运行时对话图形
-        /// </summary>
-        public Runtime.DialogueRuntimeGraph CreateRuntimeGraph()
-        {
-            var runtimeGraph = ScriptableObject.CreateInstance<Runtime.DialogueRuntimeGraph>();
-            runtimeGraph.BuildFromEditorGraph(this);
-            return runtimeGraph;
+            return outputPort.FirstConnectedPort;
         }
 
         /// <summary>
@@ -75,15 +71,11 @@ namespace GraphToolkitTutorials.DialogueSystem
         public bool Validate(out string errorMessage)
         {
             errorMessage = string.Empty;
-
-            // 检查是否有起始节点
-            var startNode = FindStartNode();
-            if (startNode == null)
+            if (FindStartNode() == null)
             {
                 errorMessage = "Dialogue graph must have a Start node";
                 return false;
             }
-
             return true;
         }
     }

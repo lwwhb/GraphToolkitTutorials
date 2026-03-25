@@ -1,139 +1,97 @@
+using System;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.DialogueSystem
 {
     /// <summary>
-    /// 设置变量节点 - 设置对话变量
+    /// 设置变量节点 - 向 DialogueVariables 写入键值后继续执行
     /// </summary>
-    [Node("Set Variable", "Dialogue/Action")]
+    [Node("Action", "")]
     [UseWithGraph(typeof(DialogueGraph))]
+    [Serializable]
     internal class SetVariableNode : DialogueNode
     {
-        [SerializeField]
-        private string m_VariableKey = "key";
-
-        [SerializeField]
-        private string m_VariableValue = "value";
-
+        private INodeOption m_KeyOption;
+        private INodeOption m_ValueOption;
         private IPort m_OutputPort;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddInputPort(context);
-
             m_OutputPort = context.AddOutputPort("Out")
-                .WithConnectorUI(PortConnectorUI.Arrowhead)
-                .Build();
-        }
-
-        public DialogueNode GetNextNode(DialogueGraph graph)
-        {
-            var connectedPort = graph.GetConnectedInputPort(m_OutputPort);
-            if (connectedPort != null && connectedPort.Node is DialogueNode dialogueNode)
-            {
-                return dialogueNode;
-            }
-            return null;
-        }
-
-        public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
-        {
-            var runtimeNode = new Runtime.SetVariableNode
-            {
-                variableKey = m_VariableKey,
-                variableValue = m_VariableValue
-            };
-
-            var nextNode = GetNextNode(graph);
-            if (nextNode != null)
-            {
-                runtimeNode.nextNodeIndex = nextNode.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.nextNodeIndex = -1;
-            }
-
-            return runtimeNode;
+                .WithConnectorUI(PortConnectorUI.Arrowhead).Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Variable Key", () => m_VariableKey, v => m_VariableKey = v)
-                .Delayed()
-                .Build();
+            m_KeyOption   = context.AddOption<string>("Variable Key").Delayed().Build();
+            m_ValueOption = context.AddOption<string>("Variable Value").Delayed().Build();
+        }
 
-            context.AddOption("Variable Value", () => m_VariableValue, v => m_VariableValue = v)
-                .Delayed()
-                .Build();
+        public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
+        {
+            string key = "key";
+            m_KeyOption?.TryGetValue(out key);
+            string value = "value";
+            m_ValueOption?.TryGetValue(out value);
+
+            int next = -1;
+            var conn = graph.GetConnectedInputPort(m_OutputPort);
+            if (conn != null && graph.FindNodeForPort(conn) is DialogueNode n)
+                next = n.GetNodeIndex(graph);
+
+            return new Runtime.SetVariableNode
+            {
+                variableKey   = key   ?? "key",
+                variableValue = value ?? "value",
+                nextNodeIndex = next
+            };
         }
     }
 
     /// <summary>
-    /// 事件节点 - 触发游戏事件
+    /// 事件节点 - 触发具名游戏事件（通过 UnityEvent 通知外部系统）
     /// </summary>
-    [Node("Event", "Dialogue/Action")]
+    [Node("Action", "")]
     [UseWithGraph(typeof(DialogueGraph))]
+    [Serializable]
     internal class EventNode : DialogueNode
     {
-        [SerializeField]
-        private string m_EventName = "EventName";
-
-        [SerializeField]
-        private string m_EventParameter = "";
-
+        private INodeOption m_EventNameOption;
+        private INodeOption m_EventParamOption;
         private IPort m_OutputPort;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddInputPort(context);
-
             m_OutputPort = context.AddOutputPort("Out")
-                .WithConnectorUI(PortConnectorUI.Arrowhead)
-                .Build();
-        }
-
-        public DialogueNode GetNextNode(DialogueGraph graph)
-        {
-            var connectedPort = graph.GetConnectedInputPort(m_OutputPort);
-            if (connectedPort != null && connectedPort.Node is DialogueNode dialogueNode)
-            {
-                return dialogueNode;
-            }
-            return null;
-        }
-
-        public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
-        {
-            var runtimeNode = new Runtime.EventNode
-            {
-                eventName = m_EventName,
-                eventParameter = m_EventParameter
-            };
-
-            var nextNode = GetNextNode(graph);
-            if (nextNode != null)
-            {
-                runtimeNode.nextNodeIndex = nextNode.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.nextNodeIndex = -1;
-            }
-
-            return runtimeNode;
+                .WithConnectorUI(PortConnectorUI.Arrowhead).Build();
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Event Name", () => m_EventName, v => m_EventName = v)
-                .Delayed()
-                .Build();
+            m_EventNameOption  = context.AddOption<string>("Event Name").Delayed().Build();
+            m_EventParamOption = context.AddOption<string>("Event Parameter").Delayed().Build();
+        }
 
-            context.AddOption("Event Parameter", () => m_EventParameter, v => m_EventParameter = v)
-                .Delayed()
-                .Build();
+        public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
+        {
+            string eventName = "EventName";
+            m_EventNameOption?.TryGetValue(out eventName);
+            string eventParam = "";
+            m_EventParamOption?.TryGetValue(out eventParam);
+
+            int next = -1;
+            var conn = graph.GetConnectedInputPort(m_OutputPort);
+            if (conn != null && graph.FindNodeForPort(conn) is DialogueNode n)
+                next = n.GetNodeIndex(graph);
+
+            return new Runtime.EventNode
+            {
+                eventName      = eventName  ?? "EventName",
+                eventParameter = eventParam ?? "",
+                nextNodeIndex  = next
+            };
         }
     }
 }

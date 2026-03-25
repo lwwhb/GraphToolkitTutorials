@@ -1,5 +1,6 @@
+using System;
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.DialogueSystem
 {
@@ -7,6 +8,7 @@ namespace GraphToolkitTutorials.DialogueSystem
     /// 对话节点基类
     /// 所有对话节点都继承自此类
     /// </summary>
+    [Serializable]
     internal abstract class DialogueNode : Node
     {
         /// <summary>
@@ -34,7 +36,10 @@ namespace GraphToolkitTutorials.DialogueSystem
         /// </summary>
         public int GetNodeIndex(DialogueGraph graph)
         {
-            return graph.GetNodes().IndexOf(this);
+            var allNodes = new List<INode>(graph.GetNodes());
+            for (int i = 0; i < allNodes.Count; i++)
+                if (allNodes[i] == this) return i;
+            return -1;
         }
     }
 }

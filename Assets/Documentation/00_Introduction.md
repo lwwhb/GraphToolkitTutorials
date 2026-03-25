@@ -93,15 +93,58 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 
 ---
 
-### 阶段三：后续教程（规划中）
+### 阶段三：实战项目
+
+#### [教程7: 行为树系统](07_BehaviorTree.md)
+**难度**: ⭐⭐⭐⭐
+**时间**: 4-5小时
+
+实现完整的 AI 行为树：
+- Composite（Sequence / Selector）、Decorator（Inverter / Repeater）、Leaf 三层节点
+- 运行时黑板（Blackboard）共享 AI 状态数据
+- 递归 Tick 机制与 Success / Failure / Running 三态返回值
+- `BehaviorTreeRunner` 每帧驱动根节点 Tick
+
+**关键收获**: 将经典 AI 架构映射为 GraphToolkit 执行流图，掌握树形遍历运行时
+
+---
+
+#### [教程8: 对话系统](08_DialogueSystem.md)
+**难度**: ⭐⭐⭐⭐
+**时间**: 4-5小时
+
+构建完整的游戏对话系统：
+- 线性对话、玩家选择分支（`ChoiceNode`）、条件分支（`BranchNode`）
+- 运行时变量管理（`DialogueVariables`，字符串键值对）
+- `UnityEvent` 解耦 `DialogueRunner` 与 UI / 业务逻辑
+- `graph.FindNodeForPort(port)` 的必要性（`IPort` 无 `.Node` 属性）
+- New Input System（`Keyboard.current`）与 asmdef 引用配置
+
+**关键收获**: 综合运用执行流全套技术，掌握 UnityEvent 解耦模式
+
+---
+
+#### [教程9: 渲染图基础](09_RenderGraphBasics.md)
+**难度**: ⭐⭐⭐⭐⭐
+**时间**: 5-6小时
+
+将图形系统集成到 Unity 6 URP RenderGraph API：
+- `RecordRenderGraph` 替代旧版 `Execute`（Unity 6 URP 唯一入口）
+- 每节点一个 `AddRasterRenderPass`，Frame Debugger 中各自独立可见
+- `ContextContainer` 三个数据对象：`UniversalResourceData` / `UniversalCameraData` / `UniversalRenderingData`
+- `DrawRendererList`（新版）代替 `DrawRenderers`（旧版）
+- 双 Pass Blit 模式（同一纹理不能在同一 Pass 内同时读写）
+
+**关键收获**: 掌握 Unity 6 URP RenderGraph API，理解 Frame Debugger 可见性原理
+
+---
+
+### 阶段四：渲染图（规划中）
 
 以下教程正在开发中，将在后续版本中发布。
 
 | 教程 | 主题 | 核心概念 |
 |------|------|---------|
-| 教程7 | 行为树系统 | Composite / Decorator / Leaf 三层节点，运行时黑板 |
-| 教程8 | 对话系统 | 分支对话、变量条件、UI 集成 |
-| 教程9 | 渲染图基础 | URP ScriptableRenderPass，图驱动渲染 |
 | 教程10 | 完整图形化渲染管线 | 完整 URP 渲染 Pass 库，条件渲染 |
 
 ---
@@ -110,12 +153,11 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 
 ### 快速入门路径（适合时间有限的开发者）
 1. 教程1: Hello Graph（必学）
-2. 教程2: 数据流图形（必学）
-3. 教程3: 执行流图形（必学）
-4. 根据需求选择教程4（数据流方向）或教程6（执行流方向）
+2. 教程3: 执行流图形（必学）
+3. 根据需求选择教程4（数据流方向）或教程6（执行流方向）
 
 ### 完整学习路径（适合深入掌握）
-按顺序完成所有教程1-6
+按顺序完成所有教程1-9
 
 ### 专项学习路径
 
@@ -123,7 +165,20 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 - 教程1 → 教程2 → 教程4 → 教程5
 
 **游戏逻辑方向**:
-- 教程1 → 教程3 → 教程6
+- 教程1 → 教程3 → 教程6 → 教程7 → 教程8
+
+---
+
+## 两大图形范式对比
+
+| 特性 | 数据流（Pull） | 执行流（Push） |
+|------|--------------|--------------|
+| 典型教程 | 1, 2, 4, 5 | 3, 6, 7, 8, 9 |
+| 求值时机 | 导入时（ScriptedImporter） | 运行时（MonoBehaviour） |
+| 连线方向 | 数据从源节点流向目标 | 执行顺序从上游流向下游 |
+| 等待/异步 | 不支持 | 支持（协程 yield） |
+| Editor/Runtime 分离 | 不需要 | 必须 |
+| 适用场景 | 材质、纹理、着色器 | AI、对话、任务、渲染管线 |
 
 ---
 
@@ -176,7 +231,7 @@ Assets/Tutorials/
 ├─ 03_ExecutionFlow/
 │  ├─ Editor/           # 编辑器节点
 │  └─ Runtime/          # 运行时节点、执行器、MonoBehaviour
-├─ 06_AbilitySystem/
+├─ 08_DialogueSystem/
 │  ├─ Editor/
 │  ├─ Runtime/
 │  └─ Examples/         # 示例资产与测试场景
@@ -186,7 +241,7 @@ Assets/Tutorials/
 ### 命名规范
 - **Graph 类**: `[功能]Graph`（如 `CalculatorGraph`、`MaterialGraph`）
 - **Node 类**: `[功能]Node`（如 `AddNode`、`OnEventNode`）
-- **文件扩展名**: 简短且描述性（`.calc`、`.texgraph`、`.matgraph`、`.ability`）
+- **文件扩展名**: 简短且描述性（`.calc`、`.texgraph`、`.matgraph`、`.ability`、`.bt`、`.dialogue`）
 
 ---
 
@@ -198,6 +253,12 @@ A: GraphToolkit 是 Unity 6 的内置模块，旧版本无法使用。
 ### Q: 数据流图和执行流图的区别？
 A: 数据流（Pull 模式）在导入时求值，结果存入资产；执行流（Push 模式）在运行时由 MonoBehaviour 驱动，支持时序、等待、并发。
 
+### Q: IPort 没有 .Node 属性怎么办？
+A: 使用 `graph.FindNodeForPort(port)` 遍历所有节点的输入/输出端口来查找。这是执行流图中连线查找的标准模式（见教程3、7、8）。
+
+### Q: 项目使用 Input System package 后 Input.GetKey 报错？
+A: 在 runtime asmdef 的 `references` 中添加 `"Unity.InputSystem"`，并改用 `Keyboard.current` / `Mouse.current` API。
+
 ### Q: 教程代码的许可证？
 A: MIT 许可证，可自由使用和修改。
 
@@ -205,11 +266,24 @@ A: MIT 许可证，可自由使用和修改。
 
 ## 版本历史
 
+### v3.1.0 (2026-03-25)
+- 完成教程9（渲染图基础）
+- 教程9修复：`RecordRenderGraph` 每节点独立 `AddRasterRenderPass`，Frame Debugger 可见
+- 教程9修复：`DrawRendererList` 替代 `BeginSample`/`EndSample`（CPU 标记不是 GPU 命令）
+- 教程9修复：`[SerializeReference]` 多态序列化 + `Blitter.BlitTexture` 双 Pass 模式
+- 阶段三新增教程9，阶段四为"完整渲染管线（规划中）"
+
+### v3.0.0 (2026-03-25)
+- 完成教程7（行为树系统）和教程8（对话系统）
+- 教程8修复：`IPort.Node` → `graph.FindNodeForPort(port)`
+- 教程8修复：Input System asmdef 引用 + `Keyboard.current` API
+- 教程8新增：`DialogueTester` 头像渲染（`GUI.DrawTextureWithTexCoords`）
+- 阶段三更新为"实战项目"，阶段四为"渲染图（规划中）"
+
 ### v2.0.0 (2026-03-24)
 - 完成教程1-6（全部可运行）
 - 教程6从 Custom UI 改为技能系统（事件驱动 + 并行执行）
 - 修复 Tutorial 06 所有节点的 `[Node]` 属性错误
-- 规划教程7-10
 
 ### v1.0.0 (2026-03-16)
 - 初始版本，完成教程1-2，规划教程3-10
