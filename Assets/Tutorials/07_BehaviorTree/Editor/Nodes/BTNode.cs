@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.BehaviorTree
 {
@@ -7,6 +7,7 @@ namespace GraphToolkitTutorials.BehaviorTree
     /// 行为树节点基类
     /// 所有行为树节点都继承自此类
     /// </summary>
+    [System.Serializable]
     internal abstract class BTNode : Node
     {
         /// <summary>
@@ -30,18 +31,21 @@ namespace GraphToolkitTutorials.BehaviorTree
         public abstract Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph);
 
         /// <summary>
-        /// 获取节点在图形中的索引
+        /// 获取节点在图形节点列表中的索引
         /// </summary>
         public int GetNodeIndex(BehaviorTreeGraph graph)
         {
-            return graph.GetNodes().IndexOf(this);
+            var allNodes = new List<INode>(graph.GetNodes());
+            for (int i = 0; i < allNodes.Count; i++)
+                if (allNodes[i] == this) return i;
+            return -1;
         }
     }
 
     /// <summary>
-    /// 复合节点基类
-    /// 可以有多个子节点
+    /// 复合节点基类 — 可以有多个子节点
     /// </summary>
+    [System.Serializable]
     internal abstract class CompositeNode : BTNode
     {
         /// <summary>
@@ -56,34 +60,30 @@ namespace GraphToolkitTutorials.BehaviorTree
         {
             m_ChildrenPort = context.AddOutputPort("Children")
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
-                .WithCapacity(PortCapacity.Multiple)
                 .Build();
         }
 
         /// <summary>
         /// 获取所有子节点
         /// </summary>
-        public System.Collections.Generic.List<BTNode> GetChildren(BehaviorTreeGraph graph)
+        public List<BTNode> GetChildren(BehaviorTreeGraph graph)
         {
-            var children = new System.Collections.Generic.List<BTNode>();
+            var children = new List<BTNode>();
             var connectedPorts = graph.GetConnectedInputPorts(m_ChildrenPort);
-
             foreach (var port in connectedPorts)
             {
-                if (port.Node is BTNode btNode)
-                {
+                var node = graph.FindNodeForPort(port);
+                if (node is BTNode btNode)
                     children.Add(btNode);
-                }
             }
-
             return children;
         }
     }
 
     /// <summary>
-    /// 装饰节点基类
-    /// 只能有一个子节点
+    /// 装饰节点基类 — 只能有一个子节点
     /// </summary>
+    [System.Serializable]
     internal abstract class DecoratorNode : BTNode
     {
         /// <summary>
@@ -107,18 +107,19 @@ namespace GraphToolkitTutorials.BehaviorTree
         public BTNode GetChild(BehaviorTreeGraph graph)
         {
             var connectedPorts = graph.GetConnectedInputPorts(m_ChildPort);
-            if (connectedPorts.Count > 0 && connectedPorts[0].Node is BTNode btNode)
+            if (connectedPorts.Count > 0)
             {
-                return btNode;
+                var node = graph.FindNodeForPort(connectedPorts[0]);
+                return node as BTNode;
             }
             return null;
         }
     }
 
     /// <summary>
-    /// 叶子节点基类
-    /// 没有子节点，执行具体的行为
+    /// 叶子节点基类 — 没有子节点，执行具体行为
     /// </summary>
+    [System.Serializable]
     internal abstract class LeafNode : BTNode
     {
         // 叶子节点没有子节点端口

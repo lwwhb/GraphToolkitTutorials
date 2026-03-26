@@ -1,13 +1,13 @@
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.BehaviorTree
 {
     /// <summary>
-    /// 根节点 - 行为树的起点
+    /// 根节点 — 行为树的起点，有且只有一个子节点
     /// </summary>
     [Node("Root", "Behavior Tree")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class RootNode : BTNode
     {
         private IPort m_ChildPort;
@@ -28,28 +28,21 @@ namespace GraphToolkitTutorials.BehaviorTree
         public BTNode GetChild(BehaviorTreeGraph graph)
         {
             var connectedPorts = graph.GetConnectedInputPorts(m_ChildPort);
-            if (connectedPorts.Count > 0 && connectedPorts[0].Node is BTNode btNode)
+            if (connectedPorts.Count > 0)
             {
-                return btNode;
+                var node = graph.FindNodeForPort(connectedPorts[0]);
+                return node as BTNode;
             }
             return null;
         }
 
         public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
         {
-            var runtimeNode = new Runtime.RootNode();
-
             var child = GetChild(graph);
-            if (child != null)
+            return new Runtime.RootNode
             {
-                runtimeNode.childIndex = child.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.childIndex = -1;
-            }
-
-            return runtimeNode;
+                childIndex = child != null ? child.GetNodeIndex(graph) : -1
+            };
         }
     }
 }

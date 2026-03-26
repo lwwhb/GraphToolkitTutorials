@@ -5,24 +5,18 @@ namespace GraphToolkitTutorials.RenderGraphBasics.Runtime
 {
     /// <summary>
     /// 运行时渲染图形
-    /// 包含所有运行时节点的可序列化版本
+    /// 包含所有运行时节点的可序列化列表，由 RenderGraphImporter 填充。
     /// </summary>
     public class RenderGraphRuntime : ScriptableObject
     {
-        /// <summary>
-        /// 所有运行时节点
-        /// </summary>
+        /// <summary>所有运行时节点（[SerializeReference] 支持多态序列化）</summary>
         [SerializeReference]
         public List<RenderRuntimeNode> nodes = new List<RenderRuntimeNode>();
 
-        /// <summary>
-        /// 起始节点索引
-        /// </summary>
+        /// <summary>相机节点在 nodes 列表中的索引</summary>
         public int startNodeIndex = -1;
 
-        /// <summary>
-        /// 获取指定索引的节点（非泛型版本）
-        /// </summary>
+        /// <summary>获取指定索引的节点</summary>
         public RenderRuntimeNode GetNode(int index)
         {
             if (index >= 0 && index < nodes.Count)
@@ -30,12 +24,16 @@ namespace GraphToolkitTutorials.RenderGraphBasics.Runtime
             return null;
         }
 
-        /// <summary>
-        /// 获取指定索引的节点（泛型版本）
-        /// </summary>
+        /// <summary>获取指定索引的节点（泛型版本）</summary>
         public T GetNode<T>(int index) where T : RenderRuntimeNode
+            => GetNode(index) as T;
+
+        /// <summary>获取相机节点（执行起点）</summary>
+        public CameraNode GetCameraNode()
         {
-            return GetNode(index) as T;
+            if (startNodeIndex >= 0 && startNodeIndex < nodes.Count)
+                return nodes[startNodeIndex] as CameraNode;
+            return null;
         }
     }
 }

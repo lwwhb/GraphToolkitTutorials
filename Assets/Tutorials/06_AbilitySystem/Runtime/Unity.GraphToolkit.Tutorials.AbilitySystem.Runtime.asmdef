@@ -1,0 +1,16 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.AbilitySystem.Runtime",
+    "rootNamespace": "GraphToolkitTutorials.AbilitySystem.Runtime",
+    "references": [
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

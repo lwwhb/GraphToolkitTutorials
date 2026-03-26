@@ -160,7 +160,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
                 }
             }
 
-            if (node.successPolicy == Editor.ParallelNode.SuccessPolicy.RequireAll)
+            if (node.successPolicy == ParallelNode.SuccessPolicy.RequireAll)
             {
                 yield return successCount == childStatuses.Count ? NodeStatus.Success : NodeStatus.Failure;
             }

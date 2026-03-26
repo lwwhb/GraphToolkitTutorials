@@ -1,118 +1,89 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
 namespace GraphToolkitTutorials.ContextBlocks
 {
     /// <summary>
-    /// 操作块节点
-    /// 在函数内部执行各种操作
+    /// 向量加法块节点 — accumulated + B
+    /// TryGetValue 自动读取：有连线则取上游值，无连线则取编辑器内联常量。
     /// </summary>
-    [Node("Add", "Shader/Block")]
-    [UseWithGraph(typeof(ShaderFunctionGraph))]
-    internal class AddBlockNode : BlockNode, IVectorNode
+    [Node("Operation", "")]
+    [UseWithContext(typeof(FunctionContextNode))]
+    [Serializable]
+    internal class AddBlockNode : BlockNode
     {
-        private IPort m_InputA;
-        private IPort m_InputB;
-        private IPort m_Output;
+        private IPort m_B;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            m_InputA = context.AddInputPort<Vector3>("A").Build();
-            m_InputB = context.AddInputPort<Vector3>("B").Build();
-            m_Output = context.AddOutputPort<Vector3>("Result").Build();
+            m_B = context.AddInputPort<Vector3>("B").Build();
         }
 
-        public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+        public Vector3 Apply(Vector3 accumulated)
         {
-            if (port != m_Output)
-                return Vector3.zero;
-
-            Vector3 a = EvaluateInput(m_InputA, graph);
-            Vector3 b = EvaluateInput(m_InputB, graph);
-
-            return a + b;
-        }
-
-        private Vector3 EvaluateInput(IPort inputPort, ShaderFunctionGraph graph)
-        {
-            var connectedPort = graph.GetConnectedOutputPort(inputPort);
-            if (connectedPort != null)
-            {
-                return graph.EvaluateVectorPort(connectedPort);
-            }
-            return Vector3.zero;
+            Vector3 b = Vector3.zero;
+            m_B.TryGetValue<Vector3>(out b);
+            return accumulated + b;
         }
     }
 
     /// <summary>
-    /// 乘法块节点
+    /// 标量乘法块节点 — accumulated * Factor
+    /// TryGetValue 自动读取：有连线则取上游值，无连线则取编辑器内联常量。
     /// </summary>
-    [Node("Multiply", "Shader/Block")]
-    [UseWithGraph(typeof(ShaderFunctionGraph))]
-    internal class MultiplyBlockNode : BlockNode, IVectorNode
+    [Node("Operation", "")]
+    [UseWithContext(typeof(FunctionContextNode))]
+    [Serializable]
+    internal class MultiplyBlockNode : BlockNode
     {
-        private IPort m_InputA;
-        private IPort m_InputB;
-        private IPort m_Output;
+        private IPort m_Factor;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            m_InputA = context.AddInputPort<Vector3>("A").Build();
-            m_InputB = context.AddInputPort<Vector3>("B").Build();
-            m_Output = context.AddOutputPort<Vector3>("Result").Build();
+            m_Factor = context.AddInputPort<float>("Factor").Build();
         }
 
-        public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+        public Vector3 Apply(Vector3 accumulated)
         {
-            if (port != m_Output)
-                return Vector3.zero;
-
-            Vector3 a = EvaluateInput(m_InputA, graph);
-            Vector3 b = EvaluateInput(m_InputB, graph);
-
-            return new Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
-        }
-
-        private Vector3 EvaluateInput(IPort inputPort, ShaderFunctionGraph graph)
-        {
-            var connectedPort = graph.GetConnectedOutputPort(inputPort);
-            if (connectedPort != null)
-            {
-                return graph.EvaluateVectorPort(connectedPort);
-            }
-            return Vector3.one;
+            float factor = 1f;
+            m_Factor.TryGetValue<float>(out factor);
+            return accumulated * factor;
         }
     }
 
     /// <summary>
-    /// 归一化块节点
+    /// 向量叉积块节点 — Cross(accumulated, B)
+    /// TryGetValue 自动读取：有连线则取上游值，无连线则取编辑器内联常量。
     /// </summary>
-    [Node("Normalize", "Shader/Block")]
-    [UseWithGraph(typeof(ShaderFunctionGraph))]
-    internal class NormalizeBlockNode : BlockNode, IVectorNode
+    [Node("Operation", "")]
+    [UseWithContext(typeof(FunctionContextNode))]
+    [Serializable]
+    internal class CrossBlockNode : BlockNode
     {
-        private IPort m_Input;
-        private IPort m_Output;
+        private IPort m_B;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            m_Input = context.AddInputPort<Vector3>("Vector").Build();
-            m_Output = context.AddOutputPort<Vector3>("Result").Build();
+            m_B = context.AddInputPort<Vector3>("B").Build();
         }
 
-        public Vector3 EvaluateVector(IPort port, ShaderFunctionGraph graph)
+        public Vector3 Apply(Vector3 accumulated)
         {
-            if (port != m_Output)
-                return Vector3.zero;
-
-            var connectedPort = graph.GetConnectedOutputPort(m_Input);
-            if (connectedPort != null)
-            {
-                Vector3 input = graph.EvaluateVectorPort(connectedPort);
-                return input.normalized;
-            }
-
-            return Vector3.zero;
+            Vector3 b = Vector3.one;
+            m_B.TryGetValue<Vector3>(out b);
+            return Vector3.Cross(accumulated, b);
         }
+    }
+
+    /// <summary>
+    /// 向量归一化块节点 — normalize(accumulated)，无端口。
+    /// </summary>
+    [Node("Operation", "")]
+    [UseWithContext(typeof(FunctionContextNode))]
+    [Serializable]
+    internal class NormalizeBlockNode : BlockNode
+    {
+        public Vector3 Apply(Vector3 accumulated) => accumulated.normalized;
     }
 }

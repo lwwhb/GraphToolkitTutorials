@@ -74,7 +74,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 等待节点（运行时）
     /// </summary>
     [Serializable]
-    public class WaitNode : LeafRuntimeNode
+    public class WaitNode : ActionRuntimeNode
     {
         public float duration = 1f;
     }
@@ -83,7 +83,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 日志节点（运行时）
     /// </summary>
     [Serializable]
-    public class LogNode : LeafRuntimeNode
+    public class LogNode : ActionRuntimeNode
     {
         public string message;
         public LogType logType;
@@ -93,7 +93,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 设置黑板值节点（运行时）
     /// </summary>
     [Serializable]
-    public class SetBlackboardValueNode : LeafRuntimeNode
+    public class SetBlackboardValueNode : ActionRuntimeNode
     {
         public string key;
         public string value;
@@ -103,7 +103,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 检查黑板值节点（运行时）
     /// </summary>
     [Serializable]
-    public class CheckBlackboardValueNode : LeafRuntimeNode
+    public class CheckBlackboardValueNode : ActionRuntimeNode
     {
         public string key;
         public string expectedValue;
@@ -113,7 +113,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 随机成功节点（运行时）
     /// </summary>
     [Serializable]
-    public class RandomSuccessNode : LeafRuntimeNode
+    public class RandomSuccessNode : ActionRuntimeNode
     {
         public float successProbability = 0.5f;
     }

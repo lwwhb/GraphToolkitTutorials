@@ -58,7 +58,7 @@ namespace GraphToolkitTutorials.BehaviorTree.Runtime
     /// 叶子节点基类（运行时）
     /// </summary>
     [Serializable]
-    public abstract class LeafRuntimeNode : BTRuntimeNode
+    public abstract class ActionRuntimeNode : BTRuntimeNode
     {
     }
 }

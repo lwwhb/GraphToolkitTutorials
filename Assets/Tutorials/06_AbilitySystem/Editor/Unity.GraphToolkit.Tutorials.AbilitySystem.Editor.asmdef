@@ -1,0 +1,19 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.AbilitySystem.Editor",
+    "rootNamespace": "GraphToolkitTutorials.AbilitySystem",
+    "references": [
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Tutorials.AbilitySystem.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -5,8 +5,8 @@ using UnityEngine;
 namespace GraphToolkitTutorials.DataFlow
 {
     /// <summary>
-    /// 浮点常量节点
-    /// 输出一个固定的浮点值
+    /// Vector2 常量节点
+    /// 输出一个固定的二维向量值
     /// </summary>
     [Node("Texture", "")]
     [Serializable]
@@ -31,7 +31,7 @@ namespace GraphToolkitTutorials.DataFlow
         
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            m_Value = context.AddOption<float>("Value").Build();
+            m_Value = context.AddOption<Vector2>("Value").Build();
         }
     }
 }

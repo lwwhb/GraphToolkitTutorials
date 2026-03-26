@@ -1,256 +1,269 @@
-# 教程4: 变量和子图系统
+# 教程4: 变量与子图 — URP 材质生成器
 
 ## 概述
 
-本教程将深入探讨GraphToolkit的高级特性：变量系统和子图系统。这些功能让你能够创建可复用的图形模块，实现参数化的图形，以及构建复杂的图形层次结构。
+本教程将 GraphToolkit 的**变量系统**和**子图系统**应用于一个实际场景：构建一个基于图形的 **URP 材质生成器**。`.matgraph` 文件导入后会自动生成真实可用的 `Material` 资源，可以直接拖到场景中的 Mesh 使用。
+
+这是一个**数据流图（Pull 模式）**，与教程2类似，求值在 `ScriptedImporter` 中完成，无需运行时代码。
 
 ## 学习目标
 
-- 理解GraphToolkit的变量系统
-- 掌握IVariable接口的使用
-- 学会VariableKind（Local、Input、Output）的区别
-- 实现IVariableNode接口
-- 掌握子图系统和ISubgraphNode接口
-- 理解子图的参数传递机制
-- 避免循环引用问题
+- 理解 `IVariable` 接口及 `VariableKind`（Local、Input、Output）的用途
+- 掌握 `ISubgraphNode` 接口，将子图作为 **PBR 参数包** 封装复用
+- 区分两种子图类型：**常量子图**（只有 Output 变量）和**变量子图**（有 Input + Output 变量）
+- 学会在 `ScriptedImporter` 中生成真实 `Material`（URP/Lit Shader）
+- 理解框架自动生成常量节点与变量节点的机制，避免重复造轮子
+
+---
 
 ## 核心概念
 
 ### 变量系统
 
-GraphToolkit的变量系统类似于编程语言中的变量，可以在图形中存储和传递数据。
+GraphToolkit 的变量在**图形面板的 Blackboard** 中创建，按名称和类型定义。框架会**自动生成**对应的变量节点——无需手动编写 `VariableNode` 类。修改一次 Blackboard 中的变量默认值，所有引用它的节点同步更新。
 
-#### IVariable接口
+#### VariableKind
+
+| 种类 | 含义 | 典型用途 |
+|------|------|----------|
+| `Local` | 图形内部变量 | 在同一图中多处复用同一颜色/数值 |
+| `Input` | 子图参数（从父图注入） | 子图对外暴露的输入接口，成为父图子图节点的输入端口 |
+| `Output` | 子图返回值（传给父图） | 子图对外暴露的输出接口，成为父图子图节点的输出端口 |
+
+> **⚠️ 重要**：创建 `Input` 或 `Output` 类型的变量，要求图形的 `[Graph]` 特性使用 `GraphOptions.SupportsSubgraphs`。使用 `GraphOptions.Default` 时，框架会将 Input/Output 降级为 Local 并输出警告。
+
+#### IVariable 接口（实际可用 API）
 
 ```csharp
-public interface IVariable
+// GraphToolkit 实际提供的属性/方法（Unity 6000.5.0a8）
+variable.Name           // string — 变量名称
+variable.DataType       // Type   — 变量数据类型（typeof(Color) 等）
+variable.VariableKind   // VariableKind — Local / Input / Output
+
+variable.TryGetDefaultValue(out T value)   // 读取默认值
+variable.TrySetDefaultValue(T value)       // 写入默认值
+
+// ⚠️ 注意：IVariable 没有 .Guid 属性，也没有 .Value 属性
+// 用 variable.Name 唯一标识变量
+```
+
+#### 框架自动生成的常量节点与变量节点
+
+对于 `Color`、`float` 等 Unity 已知类型，框架会自动生成：
+- **常量节点**（实现 `IConstantNode`）：在 Inspector 中直接设置值，无需连接
+- **变量节点**（实现 `IVariableNode`）：从 Blackboard 读取变量值
+
+`MaterialGraph` 的评估方法已处理这两种接口：
+
+```csharp
+// EvaluateColorPort 中自动处理框架生成的常量/变量节点
+if (node is IConstantNode constantNode)
 {
-    string Name { get; set; }        // 变量名称
-    Type Type { get; }                // 变量类型
-    VariableKind Kind { get; }        // 变量种类
-    object Value { get; set; }        // 变量值
-    string Guid { get; }              // 唯一标识符
+    Color color = Color.white;
+    constantNode.TryGetValue(out color);   // 读取常量值
+    return color;
+}
+if (node is IVariableNode variableNode)
+{
+    Color varColor = Color.white;
+    variableNode.Variable?.TryGetDefaultValue(out varColor);   // 读取变量默认值
+    return varColor;
 }
 ```
-
-#### VariableKind枚举
-
-```csharp
-public enum VariableKind
-{
-    Local,   // 局部变量 - 仅在图形内部使用
-    Input,   // 输入变量 - 从外部接收值（用于子图）
-    Output   // 输出变量 - 向外部提供值（用于子图）
-}
-```
-
-**使用场景**:
-
-- **Local**: 图形内部的临时存储，类似于函数中的局部变量
-- **Input**: 子图的参数，从父图接收值
-- **Output**: 子图的返回值，向父图提供值
-
-#### 创建变量
-
-在图形中创建变量：
-
-```csharp
-// 在Unity编辑器的Blackboard面板中创建
-// 或通过代码创建：
-var variable = graph.AddVariable("MyColor", typeof(Color), VariableKind.Local);
-variable.Value = Color.red;
-```
-
-### IVariableNode接口
-
-变量节点用于在图形中访问变量的值。
-
-```csharp
-public interface IVariableNode
-{
-    IVariable Variable { get; set; }
-}
-```
-
-**实现示例**:
-
-```csharp
-[Node("Variable", "Material")]
-internal class VariableNode : Node, IVariableNode, IColorNode
-{
-    [SerializeField]
-    private string m_VariableGuid;
-
-    public IVariable Variable
-    {
-        get
-        {
-            // 通过GUID查找变量
-            foreach (var variable in Graph.Variables)
-            {
-                if (variable.Guid == m_VariableGuid)
-                    return variable;
-            }
-            return null;
-        }
-        set => m_VariableGuid = value?.Guid;
-    }
-
-    protected override void OnDefinePorts(IPortDefinitionContext context)
-    {
-        var variable = Variable;
-        if (variable == null) return;
-
-        // 根据变量种类创建端口
-        if (variable.Kind == VariableKind.Input || variable.Kind == VariableKind.Local)
-        {
-            context.AddInputPort(variable.Type, "Value").Build();
-        }
-        if (variable.Kind == VariableKind.Output || variable.Kind == VariableKind.Local)
-        {
-            context.AddOutputPort(variable.Type, "Value").Build();
-        }
-    }
-
-    public Color EvaluateColor(IPort port, MaterialGraph graph)
-    {
-        var variable = Variable;
-        if (variable == null) return Color.white;
-
-        // 如果有输入端口，先评估输入
-        if (m_ValueInput != null)
-        {
-            var connectedPort = graph.GetConnectedOutputPort(m_ValueInput);
-            if (connectedPort != null)
-            {
-                var color = graph.EvaluateColorPort(connectedPort);
-                variable.Value = color; // 更新变量值
-                return color;
-            }
-        }
-
-        // 返回变量的当前值
-        return (Color)variable.Value;
-    }
-}
-```
-
-**关键点**:
-1. 使用GUID而不是直接引用，因为变量可能被删除或重命名
-2. 根据VariableKind动态创建端口
-3. 输入端口用于设置变量值
-4. 输出端口用于读取变量值
 
 ---
 
-### 子图系统
+### 子图系统：PBR 参数包
 
-子图允许你将一个图形嵌入到另一个图形中，实现模块化和复用。
+本教程将 PBR 材质参数（BaseColor、Metallic、Smoothness、EmissionColor）封装在独立的子图文件中，主图（`.matgraph`）通过框架自动生成的子图节点引用它们。
 
-#### ISubgraphNode接口
+#### 两种子图类型
+
+本教程提供两个专用子图类型，分别演示不同的变量用法：
+
+| 类型 | 扩展名 | 变量种类 | 教学重点 |
+|------|--------|---------|---------|
+| `MaterialConstSubgraph` | `.matconstsubgraph` | 仅 Output | Output 变量如何成为父图子图节点的输出端口 |
+| `MaterialVariableSubgraph` | `.matvarsubgraph` | Input + Output | Input 变量如何成为输入端口，由父图或 Node Properties 注入值 |
+
+两者均继承自 `MaterialGraph`，且都使用 `GraphOptions.SupportsSubgraphs`：
 
 ```csharp
-public interface ISubgraphNode
+// 常量子图 — 只有 Output 变量
+[Graph("matconstsubgraph", GraphOptions.SupportsSubgraphs)]
+[Subgraph(typeof(MaterialGraph))]
+[Serializable]
+public class MaterialConstSubgraph : MaterialGraph { ... }
+
+// 变量子图 — 有 Input + Output 变量
+[Graph("matvarsubgraph", GraphOptions.SupportsSubgraphs)]
+[Subgraph(typeof(MaterialGraph))]
+[Serializable]
+public class MaterialVariableSubgraph : MaterialGraph { ... }
+```
+
+#### 框架自动生成子图节点的条件
+
+**不需要手动编写 `SubgraphNode` 类。** 满足以下两个条件后，框架自动处理：
+
+1. 父图声明 `GraphOptions.SupportsSubgraphs` — 启用子图节点自动生成
+2. 子图类声明 `[Subgraph(typeof(MaterialGraph))]` — 声明该子图可被 `MaterialGraph` 引用
+
+#### 工作原理
+
+```
+VarSubgraph.matvarsubgraph（变量子图）
+  Input  变量: Tint (Color) → 成为子图节点的输入端口（可由父图注入，或在 Node Properties 设默认值）
+  Output 变量: BaseColor, Metallic, Smoothness, EmissionColor → 成为子图节点的输出端口
+       ↓
+框架自动生成的子图节点（实现 ISubgraphNode，出现在 MaterialGraph.matgraph 中）
+  输入端口:  Tint ←─ 父图中其他节点（可选）或 Node Properties 默认值
+  输出端口:  BaseColor ─→ MaterialOutputNode.BaseColor
+            Metallic  ─→ MaterialOutputNode.Metallic
+            Smoothness ─→ MaterialOutputNode.Smoothness
+            EmissionColor ─→ MaterialOutputNode.Emission Color
+```
+
+#### IPort.Name 与 IPort.DisplayName 的区别
+
+框架自动生成的子图节点的端口，`Name` 存储的是变量的 **GUID 字符串**，`DisplayName` 才是变量名称。按名称查找端口时必须使用 `DisplayName`：
+
+```csharp
+// ❌ 错误：IPort.Name 是 GUID，不是变量名
+var port = ports.FirstOrDefault(p => p.Name == "BaseColor");
+
+// ✅ 正确：用 DisplayName 匹配
+private static IPort GetPortByDisplayName(IEnumerable<IPort> ports, string displayName)
 {
-    Graph Subgraph { get; set; }
+    foreach (var p in ports)
+        if (p.DisplayName == displayName) return p;
+    return null;
 }
 ```
 
-#### 子图的工作原理
+#### MaterialGraph 中的子图求值逻辑
 
-```
-父图（Parent Graph）
-├─ [Input] → [Subgraph Node] → [Output]
-                    ↓
-            子图（Subgraph）
-            ├─ Input Variables (接收父图的值)
-            ├─ 内部处理
-            └─ Output Variables (返回给父图)
-```
-
-**实现示例**:
+框架生成的子图节点实现 `ISubgraphNode`，`MaterialGraph` 在 `EvaluateColorPort` / `EvaluateFloatPort` 中检测到该接口后，委托给专门的子图求值方法：
 
 ```csharp
-[Node("Subgraph", "Material")]
-internal class SubgraphNode : Node, ISubgraphNode, IColorNode
+// EvaluateColorPort 中的子图分支
+if (node is ISubgraphNode subgraphNode)
+    return EvaluateSubgraphColorPort(node, subgraphNode, port);
+
+private Color EvaluateSubgraphColorPort(INode subgraphNodeAsINode,
+    ISubgraphNode subgraphNode, IPort outputPort)
 {
-    [SerializeField]
-    private MaterialGraph m_Subgraph;
+    // GetSubgraph() 获取子图实例，as MaterialGraph 统一处理两种子图类型
+    var subgraph = subgraphNode.GetSubgraph() as MaterialGraph;
+    if (subgraph == null) return Color.white;
 
-    public Graph Subgraph
+    // 1. 注入 Input 变量值（有连线取上游计算值，无连线取 Node Properties 默认值）
+    InjectSubgraphInputs(subgraphNodeAsINode, subgraph);
+
+    // 2. 按 DisplayName 找到子图中对应的 Output IVariableNode，触发子图内部求值链
+    foreach (var node in subgraph.GetNodes())
     {
-        get => m_Subgraph;
-        set => m_Subgraph = value as MaterialGraph;
-    }
-
-    protected override void OnDefinePorts(IPortDefinitionContext context)
-    {
-        if (m_Subgraph == null) return;
-
-        // 为子图的输入变量创建输入端口
-        foreach (var variable in m_Subgraph.Variables)
+        if (node is IVariableNode vn
+            && vn.Variable?.Name == outputPort.DisplayName   // DisplayName = 变量名
+            && vn.Variable.VariableKind == VariableKind.Output)
         {
-            if (variable.Kind == VariableKind.Input)
+            foreach (var inPort in node.GetInputPorts())
             {
-                context.AddInputPort(variable.Type, variable.Name).Build();
+                var conn = subgraph.GetConnectedOutputPort(inPort);
+                if (conn != null) return subgraph.EvaluateColorPort(conn);
             }
-        }
-
-        // 为子图的输出变量创建输出端口
-        foreach (var variable in m_Subgraph.Variables)
-        {
-            if (variable.Kind == VariableKind.Output)
-            {
-                context.AddOutputPort(variable.Type, variable.Name).Build();
-            }
+            Color c = Color.white;
+            vn.Variable.TryGetDefaultValue(out c);
+            return c;
         }
     }
+    return Color.white;
+}
 
-    public Color EvaluateColor(IPort port, MaterialGraph graph)
+// Input 变量注入：有连线取上游值，无连线取 Node Properties 面板中设置的默认值
+private void InjectSubgraphInputs(INode subgraphNodeAsINode, MaterialGraph subgraph)
+{
+    foreach (var inputPort in subgraphNodeAsINode.GetInputPorts())
     {
-        if (m_Subgraph == null) return Color.white;
+        var connected = GetConnectedOutputPort(inputPort);
 
-        // 1. 传递输入参数到子图
-        foreach (var inputPort in Ports)
+        foreach (var variable in subgraph.GetVariables())
         {
-            if (inputPort.Direction == PortDirection.Input)
+            if (variable.Name != inputPort.DisplayName || variable.VariableKind != VariableKind.Input)
+                continue;
+
+            if (variable.DataType == typeof(Color))
             {
-                var connectedPort = graph.GetConnectedOutputPort(inputPort);
-                if (connectedPort != null)
-                {
-                    var variable = FindSubgraphVariable(inputPort.Name, VariableKind.Input);
-                    if (variable != null)
-                    {
-                        variable.Value = graph.EvaluateColorPort(connectedPort);
-                    }
-                }
+                Color value = Color.white;
+                if (connected != null) value = EvaluateColorPort(connected);
+                else inputPort.TryGetValue(out value);   // 读取 Node Properties 默认值
+                variable.TrySetDefaultValue(value);
             }
-        }
-
-        // 2. 评估子图
-        var result = m_Subgraph.FindOutputNode().EvaluateColor(null, m_Subgraph);
-
-        // 3. 从子图获取输出
-        return result;
-    }
-
-    protected override void OnValidate()
-    {
-        // 防止循环引用
-        if (m_Subgraph == Graph)
-        {
-            Debug.LogError("Cannot reference self as subgraph!");
-            m_Subgraph = null;
+            else if (variable.DataType == typeof(float))
+            {
+                float value = 0f;
+                if (connected != null) value = EvaluateFloatPort(connected);
+                else inputPort.TryGetValue(out value);
+                variable.TrySetDefaultValue(value);
+            }
+            break;
         }
     }
 }
 ```
 
-**关键点**:
-1. 子图的Input变量 → 父图中的输入端口
-2. 子图的Output变量 → 父图中的输出端口
-3. 必须防止循环引用
-4. 子图改变时需要重新定义端口
+---
+
+### MaterialOutputNode：输出真实 Material
+
+`MaterialOutputNode` 是图形的终点，持有 5 个输入端口和对应的缓存字段。`MaterialGraph.CreateMaterial()` 调用 `EvaluateAll()` 触发整图求值后用 URP/Lit Shader 创建 `Material`。
+
+```csharp
+internal class MaterialOutputNode : Node
+{
+    // 5 个输入端口
+    // Base Color(Color), Metallic(float), Smoothness(float),
+    // Emission Color(Color), Emission Intensity(float, default 0)
+
+    // 2 个 INodeOption（Metallic/Smoothness 的默认值，当端口未连接时使用）
+    private INodeOption m_DefaultMetallic;
+    private INodeOption m_DefaultSmoothness;
+
+    public void EvaluateAll(MaterialGraph graph) { /* 求值并缓存所有参数 */ }
+
+    public Color GetBaseColor()         { ... }
+    public float GetMetallic()          { ... }
+    public float GetSmoothness()        { ... }
+    public Color GetEmission()          { ... }
+    public float GetEmissionIntensity() { ... }
+}
+```
+
+### MaterialGraph.CreateMaterial()
+
+```csharp
+public Material CreateMaterial()
+{
+    var outputNode = FindOutputNode();
+    if (outputNode == null) return null;
+
+    outputNode.EvaluateAll(this);     // 触发整图求值
+
+    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+    mat.SetColor("_BaseColor",  outputNode.GetBaseColor());
+    mat.SetFloat("_Metallic",   Mathf.Clamp01(outputNode.GetMetallic()));
+    mat.SetFloat("_Smoothness", Mathf.Clamp01(outputNode.GetSmoothness()));
+
+    float intensity = outputNode.GetEmissionIntensity();
+    if (intensity > 0f)
+    {
+        mat.SetColor("_EmissionColor", outputNode.GetEmission() * intensity);
+        mat.EnableKeyword("_EMISSION");
+        mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+    }
+    return mat;
+}
+```
 
 ---
 
@@ -258,501 +271,214 @@ internal class SubgraphNode : Node, ISubgraphNode, IColorNode
 
 ```
 04_VariablesSubgraphs/
-├─ Editor/
-│  ├── MaterialGraph.cs                # 材质图形
-│  ├── MaterialGraphImporter.cs        # 资产导入器
-│  ├── Nodes/
-│  │   ├── IMaterialNode.cs            # 节点接口
-│  │   ├── VariableNode.cs             # 变量节点（IVariableNode）
-│  │   ├── SubgraphNode.cs             # 子图节点（ISubgraphNode）
-│  │   ├── ColorConstantNode.cs        # 颜色常量（IConstantNode）
-│  │   ├── FloatConstantNode.cs        # 浮点常量（IConstantNode）
-│  │   ├── MixColorNode.cs             # 颜色混合节点
-│  │   └── MaterialOutputNode.cs       # 材质输出节点
-│  └── Unity.GraphToolkit.Tutorials.VariablesSubgraphs.Editor.asmdef
-└─ Examples/
-    └── (将在Unity编辑器中创建.matgraph文件)
+└─ Editor/
+   ├── MaterialGraph.cs                    # [Graph("matgraph", SupportsSubgraphs)] + CreateMaterial() + 子图求值逻辑
+   ├── MaterialGraphImporter.cs            # 导入 .matgraph → 生成 Material 资源
+   ├── MaterialConstSubgraph.cs            # [Graph("matconstsubgraph")] 常量子图，仅 Output 变量
+   ├── MaterialConstSubgraphAsset.cs       # 常量子图的占位资产对象
+   ├── MaterialConstSubgraphImporter.cs    # 导入 .matconstsubgraph
+   ├── MaterialVariableSubgraph.cs         # [Graph("matvarsubgraph")] 变量子图，Input + Output 变量
+   ├── MaterialVariableSubgraphAsset.cs    # 变量子图的占位资产对象
+   ├── MaterialVariableSubgraphImporter.cs # 导入 .matvarsubgraph
+   └── Nodes/
+       ├── IMaterialNode.cs                # IColorNode、IFloatNode 接口（自定义节点分发用）
+       ├── MixColorNode.cs                 # Color.Lerp(A, B, Factor)
+       ├── MultiplyFloatNode.cs            # A × B（数值调整）
+       └── MaterialOutputNode.cs           # 终点节点，EvaluateAll() + GetXxx()
 ```
+
+> **注意**：`ColorConstantNode`、`FloatConstantNode`、`VariableNode` 均已移除——框架会为 `Color`/`float` 等已知类型自动生成常量节点（`IConstantNode`）和变量节点（`IVariableNode`），无需手动实现。子图节点同理，由 `[Subgraph]` + `SupportsSubgraphs` 自动生成。
+
+---
 
 ## 节点详解
 
-### VariableNode（变量节点）
+### 常量节点与变量节点（框架自动生成）
 
-访问图形变量的节点。
+框架为 `Color`、`float` 等已知 Unity 类型自动生成：
+- **常量节点**（实现 `IConstantNode`）：在 Inspector 字段中直接输入数值或颜色
+- **变量节点**（实现 `IVariableNode`）：从 Blackboard 读取变量值，修改 Blackboard 默认值，所有引用节点同步更新
 
-**特点**:
-- 实现IVariableNode接口
-- 根据变量类型和种类动态创建端口
-- 支持读取和写入变量值
+无需手动编写这些节点类，在图形编辑器的节点创建菜单中直接使用即可。
 
-**端口配置**:
+### MixColorNode
+
 ```
-Local变量:
-  [Input] → [Variable Node] → [Output]
-
-Input变量:
-  [Input] → [Variable Node]
-
-Output变量:
-  [Variable Node] → [Output]
+[Color A] ─┐
+           ├─→ Color.Lerp(A, B, Factor) ─→ [Result]
+[Color B] ─┘
+[Factor: float, default 0.5]
 ```
 
-### SubgraphNode（子图节点）
-
-引用另一个图形作为子图。
-
-**特点**:
-- 实现ISubgraphNode接口
-- 根据子图的Input/Output变量动态创建端口
-- 自动传递参数
-- 防止循环引用
-
-**工作流程**:
-1. 将父图的输入传递给子图的Input变量
-2. 评估子图
-3. 从子图的Output变量获取结果
-
-### IConstantNode实现
-
-常量节点实现IConstantNode接口：
+Factor 端口使用 `.WithDefaultValue(0.5f)` + `TryGetValue()` 回退：
 
 ```csharp
-public interface IConstantNode
-{
-    object Value { get; set; }
-}
+m_Factor = context.AddInputPort<float>("Factor").WithDefaultValue(0.5f).Build();
+
+// 未连接时：
+float factor = 0.5f;
+m_Factor.TryGetValue(out factor);
 ```
 
-这允许在编辑器中直接编辑常量值。
+### MultiplyFloatNode
+
+```
+[A: float, default 1] ─┐
+                       ├─→ A × B ─→ [Result]
+[B: float, default 1] ─┘
+```
+
+用于在主图中对子图输出的 PBR 参数进行缩放，例如：
+- `SubgraphNode.Metallic(0.9) × FloatConstant(0.8) = 0.72`（子图输出金属度 × 系数，模拟磨损效果）
+
+### 子图节点（框架自动生成）
+
+**子图要求**：被引用的子图文件必须定义至少一个 Output 变量（否则节点无输出端口）。Input 变量可选，有则生成对应输入端口，可由父图连线注入值，也可在 Node Properties 面板直接设置默认值。
+
+**两种子图的端口结构**：
+
+| 子图类型 | 输入端口 | 输出端口 |
+|---------|---------|---------|
+| `MaterialConstSubgraph` | 无 | BaseColor, Metallic, Smoothness, EmissionColor |
+| `MaterialVariableSubgraph` | Tint (Color) | BaseColor, Metallic, Smoothness, EmissionColor |
+
+**求值顺序**：
+1. 主图求值到子图节点的某个输出端口
+2. `MaterialGraph.EvaluateColorPort/FloatPort` 检测到 `ISubgraphNode`，委托给 `EvaluateSubgraphColorPort/FloatPort`
+3. 调用 `InjectSubgraphInputs`：有连线取上游计算值，无连线取 Node Properties 中的默认值
+4. 按 `outputPort.DisplayName` 在子图中找到对应名称的 Output `IVariableNode`
+5. 追溯其上游连接递归求值；若无连接则读取变量默认值
+
+### MaterialOutputNode
+
+**URP/Lit Shader 属性对照**：
+
+| 输入端口 | URP Shader 属性 | 说明 |
+|---------|----------------|------|
+| Base Color | `_BaseColor` | PBR 基础颜色 |
+| Metallic | `_Metallic` | 金属度 0–1，未连接时用 INodeOption 默认值 |
+| Smoothness | `_Smoothness` | 光滑度 0–1，未连接时用 INodeOption 默认值 |
+| Emission Color | `_EmissionColor` | 自发光颜色 |
+| Emission Intensity | （乘以 EmissionColor）| 强度 > 0 时启用 `_EMISSION` 关键字 |
+
+---
+
+## API 迁移注意事项（Unity 6000.5.0a8）
+
+| 旧写法（已失效） | 新写法 |
+|----------------|--------|
+| `GraphOptions.None` | `GraphOptions.Default` |
+| `internal class MyGraph` | `public class MyGraph` |
+| `context.AddOption("X", getter, setter)` | `INodeOption opt = context.AddOption<T>("X").Build()` |
+| `opt.TryGetValue(out val)` | 同上，API 未变 |
+| `graph.Variables` | `graph.GetVariables()` |
+| `node.Ports` | `node.GetInputPorts()` / `node.GetOutputPorts()` |
+| `variable.Guid` | ❌ 不存在，用 `variable.Name` |
+| `variable.Value` | ❌ 不存在，用 `TryGetDefaultValue` / `TrySetDefaultValue` |
+| `ctx.AddObjectToAsset("graph", graph)` | ❌ Graph 非 UnityEngine.Object，不可添加为子资产 |
+| 手动编写 `SubgraphNode : Node, ISubgraphNode` | ❌ 改用 `[Subgraph(typeof(ParentGraph))]` + `GraphOptions.SupportsSubgraphs` |
+| `subgraphNode.Subgraph` | `subgraphNode.GetSubgraph()` |
+| `inputPort.Name` 匹配变量名 | ❌ `Name` 是 GUID，改用 `inputPort.DisplayName` |
+| `GraphOptions.Default` 用于子图（含 Input/Output 变量） | `GraphOptions.SupportsSubgraphs`（否则 Input/Output 变量被降级为 Local） |
 
 ---
 
 ## 实践步骤
 
-### 示例1: 使用局部变量
+### 步骤1：创建常量子图（ConstSubgraph）
 
-创建一个使用局部变量的简单图形：
-
-**步骤**:
-1. 创建.matgraph文件
-2. 在Blackboard中添加局部变量：
-   - 名称: "TempColor"
-   - 类型: Color
-   - 种类: Local
-3. 添加节点：
-   - Color常量节点（红色）
-   - Variable节点（关联到TempColor）
-   - Material Output节点
-4. 连接：
-   - Color → Variable(Input)
-   - Variable(Output) → Material Output
-
-**结果**: 颜色通过变量传递到输出
-
-### 示例2: 创建可复用的颜色混合子图
-
-**步骤A: 创建子图**
-1. 创建ColorMix.matgraph
-2. 添加Input变量：
-   - "ColorA" (Color)
-   - "ColorB" (Color)
-   - "MixFactor" (float)
-3. 添加Output变量：
-   - "Result" (Color)
-4. 构建图形：
+1. 右键 → **Create → Graph Toolkit → Material Const Subgraph**，命名为 `ConstSubgraph`
+2. Unity 导入时自动初始化：创建 4 个 Output 变量 + 常量节点连线：
    ```
-   [Variable: ColorA] ─┐
-                       ├─> [Mix Color] → [Variable: Result] → [Output]
-   [Variable: ColorB] ─┤        ↑
-                       │        │
-   [Variable: MixFactor] ───────┘
+   ColorConstant(#FFD700 金色) ──→ VariableNode[Output: BaseColor]
+   FloatConstant(0.9)          ──→ VariableNode[Output: Metallic]
+   FloatConstant(0.7)          ──→ VariableNode[Output: Smoothness]
+   ColorConstant(黑色)          ──→ VariableNode[Output: EmissionColor]
    ```
+3. 打开图形验证结构，可修改常量节点的值调整材质参数
 
-**步骤B: 使用子图**
-1. 创建MyMaterial.matgraph
-2. 添加节点：
-   - 2个Color常量
-   - 1个Float常量
-   - 1个Subgraph节点（引用ColorMix.matgraph）
-   - 1个Material Output
-3. 连接：
+### 步骤2：创建变量子图（VarSubgraph）
+
+1. 右键 → **Create → Graph Toolkit → Material Variable Subgraph**，命名为 `VarSubgraph`
+2. Unity 导入时自动初始化：创建 1 个 Input 变量 + 4 个 Output 变量 + 连线：
    ```
-   [Color: Red] ────────> [Subgraph.ColorA]
-   [Color: Blue] ───────> [Subgraph.ColorB]
-   [Float: 0.5] ────────> [Subgraph.MixFactor]
-   [Subgraph.Result] ──> [Material Output]
+   Input  变量: Tint (Color, 默认白色) → 子图节点上生成输入端口
+   Output 变量: BaseColor, Metallic, Smoothness, EmissionColor
+
+   VariableNode[Input: Tint] ──→ VariableNode[Output: BaseColor]
+   FloatConstant(0.9)         ──→ VariableNode[Output: Metallic]
+   FloatConstant(0.7)         ──→ VariableNode[Output: Smoothness]
+   ColorConstant(黑色)         ──→ VariableNode[Output: EmissionColor]
    ```
+3. 打开图形，在 Blackboard 中可看到 Tint（Input）和 4 个 Output 变量
 
-**结果**: 子图被复用，输出混合后的颜色
+### 步骤3：创建主图（MaterialGraph）
 
-### 示例3: 嵌套子图
+1. 右键 → **Create → Graph Toolkit → MaterialGraph**
+2. Unity 导入时自动初始化：找到同目录下的 `.matvarsubgraph` 或 `.matconstsubgraph`，自动添加子图节点并连线到 `MaterialOutputNode`
+3. 打开图形可以看到子图节点的输入端口（Tint）和输出端口（BaseColor 等）均已连接
 
-创建更复杂的层次结构：
+### 步骤4：验证两种注入方式
 
-```
-MainGraph
-├─ Subgraph A
-│  └─ Subgraph B
-│     └─ 基础处理
-└─ Output
-```
+**方式A — Node Properties 默认值（无连线）**：
+1. 打开主图，选中 `VarSubgraph` 子图节点
+2. 在 Node Properties / Inspector 面板中修改 `Tint` 颜色
+3. 保存图形 → `MaterialGraph.matgraph` 重新导入，观察生成的 Material 颜色变化
 
-**注意**: 必须避免循环引用（A引用B，B又引用A）
-
----
-
-## 变量系统最佳实践
-
-### 1. 变量命名规范
-
-```csharp
-// ✅ 好的命名
-"BaseColor"
-"MixFactor"
-"OutputResult"
-
-// ❌ 避免的命名
-"var1"
-"temp"
-"x"
-```
-
-### 2. 选择正确的VariableKind
-
-```csharp
-// Local - 图形内部使用
-var tempColor = graph.AddVariable("TempColor", typeof(Color), VariableKind.Local);
-
-// Input - 子图参数
-var inputColor = graph.AddVariable("InputColor", typeof(Color), VariableKind.Input);
-
-// Output - 子图返回值
-var outputColor = graph.AddVariable("OutputColor", typeof(Color), VariableKind.Output);
-```
-
-### 3. 变量初始化
-
-```csharp
-// 始终为变量设置默认值
-variable.Value = Color.white;  // Color类型
-variable.Value = 0f;           // float类型
-variable.Value = Vector3.zero; // Vector3类型
-```
-
-### 4. 类型安全
-
-```csharp
-// 评估前检查类型
-public Color EvaluateColor(IPort port, MaterialGraph graph)
-{
-    var variable = Variable;
-    if (variable == null || variable.Type != typeof(Color))
-        return Color.white;
-
-    if (variable.Value is Color colorValue)
-        return colorValue;
-
-    return Color.white;
-}
-```
-
----
-
-## 子图系统最佳实践
-
-### 1. 防止循环引用
-
-```csharp
-protected override void OnValidate()
-{
-    base.OnValidate();
-
-    // 检查直接循环引用
-    if (m_Subgraph == Graph)
-    {
-        Debug.LogError("Cannot reference self!");
-        m_Subgraph = null;
-        return;
-    }
-
-    // 检查间接循环引用（可选，更复杂）
-    if (HasCircularReference(m_Subgraph, Graph))
-    {
-        Debug.LogError("Circular reference detected!");
-        m_Subgraph = null;
-    }
-}
-
-private bool HasCircularReference(Graph subgraph, Graph targetGraph)
-{
-    if (subgraph == null) return false;
-
-    foreach (var node in subgraph.Nodes)
-    {
-        if (node is ISubgraphNode subgraphNode)
-        {
-            if (subgraphNode.Subgraph == targetGraph)
-                return true;
-
-            if (HasCircularReference(subgraphNode.Subgraph, targetGraph))
-                return true;
-        }
-    }
-    return false;
-}
-```
-
-### 2. 子图版本管理
-
-```csharp
-// 当子图的接口（Input/Output变量）改变时
-// 需要通知父图重新定义端口
-protected override void OnDefineOptions(IOptionDefinitionContext context)
-{
-    context.AddOption("Subgraph",
-        () => m_Subgraph,
-        v => {
-            m_Subgraph = v;
-            Graph?.OnGraphChanged(); // 触发重新定义端口
-        }
-    ).Build();
-}
-```
-
-### 3. 子图参数传递
-
-```csharp
-// 确保所有Input变量都被赋值
-public Color EvaluateColor(IPort port, MaterialGraph graph)
-{
-    if (m_Subgraph == null) return Color.white;
-
-    // 传递所有输入参数
-    foreach (var variable in m_Subgraph.Variables)
-    {
-        if (variable.Kind == VariableKind.Input)
-        {
-            var inputPort = FindPort(variable.Name, PortDirection.Input);
-            if (inputPort != null)
-            {
-                var connectedPort = graph.GetConnectedOutputPort(inputPort);
-                if (connectedPort != null)
-                {
-                    // 根据类型评估
-                    if (variable.Type == typeof(Color))
-                        variable.Value = graph.EvaluateColorPort(connectedPort);
-                    else if (variable.Type == typeof(float))
-                        variable.Value = graph.EvaluateFloatPort(connectedPort);
-                }
-                else
-                {
-                    // 使用默认值
-                    Debug.LogWarning($"Input '{variable.Name}' not connected, using default value");
-                }
-            }
-        }
-    }
-
-    // 评估子图...
-}
-```
-
-### 4. 子图缓存
-
-```csharp
-// 对于复杂的子图，可以缓存评估结果
-private Dictionary<string, object> m_SubgraphCache = new Dictionary<string, object>();
-
-public Color EvaluateColor(IPort port, MaterialGraph graph)
-{
-    // 生成缓存键
-    string cacheKey = GenerateCacheKey();
-
-    if (m_SubgraphCache.TryGetValue(cacheKey, out var cached))
-    {
-        return (Color)cached;
-    }
-
-    // 评估子图
-    var result = EvaluateSubgraph();
-
-    // 缓存结果
-    m_SubgraphCache[cacheKey] = result;
-
-    return result;
-}
-```
-
----
-
-## 高级话题
-
-### 1. 黑板系统（Blackboard）
-
-GraphToolkit提供了Blackboard UI来管理变量：
-
-- 在图形编辑器中打开Blackboard面板
-- 添加/删除/重命名变量
-- 设置变量类型和种类
-- 设置默认值
-
-### 2. 变量作用域
-
-```
-Graph
-├─ Local Variables (仅在当前图形中可见)
-├─ Input Variables (从父图接收)
-└─ Output Variables (返回给父图)
-
-Subgraph Node
-├─ 为每个Input Variable创建输入端口
-└─ 为每个Output Variable创建输出端口
-```
-
-### 3. 子图的递归评估
-
-子图可以嵌套，评估时会递归处理：
-
-```
-MainGraph.Evaluate()
-└─> SubgraphA.Evaluate()
-    └─> SubgraphB.Evaluate()
-        └─> 基础节点评估
-```
-
-### 4. 性能优化
-
-**变量访问优化**:
-```csharp
-// 缓存变量引用
-private IVariable m_CachedVariable;
-
-public IVariable Variable
-{
-    get
-    {
-        if (m_CachedVariable == null || m_CachedVariable.Guid != m_VariableGuid)
-        {
-            m_CachedVariable = FindVariable(m_VariableGuid);
-        }
-        return m_CachedVariable;
-    }
-}
-```
-
-**子图评估优化**:
-```csharp
-// 只在输入改变时重新评估
-private int m_LastInputHash;
-
-public Color EvaluateColor(IPort port, MaterialGraph graph)
-{
-    int currentHash = CalculateInputHash();
-
-    if (currentHash == m_LastInputHash && m_CachedResult != null)
-    {
-        return m_CachedResult;
-    }
-
-    m_LastInputHash = currentHash;
-    m_CachedResult = EvaluateSubgraph();
-    return m_CachedResult;
-}
-```
-
----
-
-## 练习题
-
-### 练习1: 创建参数化的渐变子图
-
-创建一个子图，接受两个颜色和一个混合因子，返回渐变颜色。
-
-**要求**:
-- 3个Input变量（ColorA, ColorB, Factor）
-- 1个Output变量（Result）
-- 使用MixColorNode实现
-
-### 练习2: 实现变量节点的Set/Get模式
-
-扩展VariableNode，添加模式选择：
-- Get模式：只有输出端口
-- Set模式：只有输入端口
-- GetSet模式：同时有输入和输出端口
-
-### 练习3: 创建材质库系统
-
-使用子图创建一个材质库：
-- BaseColor子图
-- MetallicRoughness子图
-- Normal子图
-- 主材质图形组合这些子图
+**方式B — 父图连线注入**：
+1. 在主图 Blackboard 添加 **Local** 变量 `TintOverride`（Color）
+2. 添加该变量的 VariableNode，将其输出端口连接到子图节点的 `Tint` 输入端口
+3. 修改 `TintOverride` 变量默认值，保存，观察 Material 颜色变化
 
 ---
 
 ## 常见问题
 
-### Q: 变量和端口有什么区别？
+### Q: 创建 Input/Output 变量时出现 "exposed scope" 警告，变量被降级为 Local？
 
-A:
-- **端口**：节点之间的连接点，用于传递数据
-- **变量**：图形级别的数据存储，可以被多个节点访问
+A: 子图类的 `[Graph]` 特性必须使用 `GraphOptions.SupportsSubgraphs`，`GraphOptions.Default` 不支持 Input/Output 变量。检查 `MaterialConstSubgraph` 和 `MaterialVariableSubgraph` 的特性声明。
 
-### Q: 什么时候使用Local变量？
+### Q: 在 Node Properties 修改 Tint 颜色后 Material 没有变化？
 
-A: 当你需要在图形中多个地方使用同一个值，但不想通过端口连接时。类似于编程中的局部变量。
+A: 确认 `InjectSubgraphInputs` 在无连线时调用了 `inputPort.TryGetValue(out value)`。旧版实现遇到 `connected == null` 时直接跳过，导致默认值不被注入。
 
-### Q: 子图的Input/Output变量必须都使用吗？
+### Q: 保存图形后 Material 没有更新？
 
-A: 不必须。未连接的Input变量会使用默认值，未使用的Output变量会被忽略。
+A: 在 Project 面板右键 `.matgraph` 文件 → **Reimport**，或修改文件触发自动重新导入。
 
-### Q: 如何调试子图？
+### Q: 子图节点没有输出端口？
 
-A:
-1. 在子图中添加Debug节点输出中间值
-2. 使用变量节点查看变量的当前值
-3. 在代码中添加Debug.Log
+A: 检查被引用的子图是否定义了 **Output** 类型的变量（VariableKind.Output）。框架根据子图的 Output 变量动态生成输出端口，没有 Output 变量时节点不会有可连接的输出端口。
 
-### Q: 子图可以嵌套多少层？
+### Q: Emission 没有生效？
 
-A: 理论上没有限制，但过深的嵌套会影响性能和可维护性。建议不超过3-4层。
+A: 确保 `Emission Intensity` 端口连接的值 > 0（默认值为 0，自发光关闭）。将 FloatConstantNode 设为 1.0 以上再测试。
 
-### Q: 如何处理子图版本更新？
+### Q: 能否用 Lit 以外的 Shader？
 
-A:
-1. 保持Input/Output变量的向后兼容
-2. 添加新变量时提供默认值
-3. 删除变量前检查是否有父图在使用
+A: `MaterialGraphImporter` 中修改 `Shader.Find(...)` 参数即可，如 `"Universal Render Pipeline/Unlit"` 或自定义 Shader 路径。
 
 ---
 
 ## 总结
 
-本教程介绍了GraphToolkit的两个高级特性：
-
-1. **变量系统**
-   - IVariable接口
-   - VariableKind（Local, Input, Output）
-   - IVariableNode实现
-   - 黑板管理
-
-2. **子图系统**
-   - ISubgraphNode接口
-   - 参数传递机制
-   - 循环引用防止
-   - 模块化和复用
-
-这些特性让你能够创建更复杂、更可维护的图形系统。
+| 特性 | 本教程的实现 |
+|------|-------------|
+| **变量系统** | `VariableKind.Input/Output` 需要 `GraphOptions.SupportsSubgraphs`；`IPort.DisplayName` 是变量名，`Name` 是 GUID |
+| **常量子图** | `MaterialConstSubgraph`（`.matconstsubgraph`）仅有 Output 变量，封装固定 PBR 参数包 |
+| **变量子图** | `MaterialVariableSubgraph`（`.matvarsubgraph`）有 Input + Output 变量，支持父图注入或 Node Properties 设默认值 |
+| **Input 注入** | `InjectSubgraphInputs`：有连线取上游求值；无连线取 `inputPort.TryGetValue`（Node Properties 值） |
+| **图形输出** | `MaterialOutputNode.EvaluateAll()` + `MaterialGraph.CreateMaterial()` → 真实 URP Material |
 
 ## 下一步
 
-在下一个教程中，我们将学习ContextNode和BlockNode，它们提供了更高级的节点组织方式，类似于Shader Graph中的函数节点。
+教程5将介绍 **ContextBlock 系统**，学习如何用 Block 节点组织 Shader 函数的输入/输出，构建类似 Shader Graph 中 Fragment/Vertex 上下文的结构。
 
 ---
 
 ## 参考资源
 
-- [IVariable API文档](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.IVariable.html)
-- [IVariableNode接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.IVariableNode.html)
-- [ISubgraphNode接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.ISubgraphNode.html)
-- [IConstantNode接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.IConstantNode.html)
+- [IVariable 接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.IVariable.html)
+- [IVariableNode 接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.IVariableNode.html)
+- [ISubgraphNode 接口](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Unity.GraphToolkit.Editor.ISubgraphNode.html)
+- [URP Lit Shader 属性参考](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@latest/index.html)

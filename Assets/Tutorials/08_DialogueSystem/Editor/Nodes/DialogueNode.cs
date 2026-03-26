@@ -1,5 +1,5 @@
+using System;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.DialogueSystem
 {
@@ -7,6 +7,7 @@ namespace GraphToolkitTutorials.DialogueSystem
     /// 对话节点基类
     /// 所有对话节点都继承自此类
     /// </summary>
+    [Serializable]
     internal abstract class DialogueNode : Node
     {
         /// <summary>
@@ -30,11 +31,21 @@ namespace GraphToolkitTutorials.DialogueSystem
         public abstract Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph);
 
         /// <summary>
-        /// 获取节点在图形中的索引
+        /// 获取节点在图形中的索引。
+        /// 注意：只计数 DialogueNode 实例，与 DialogueImporter 的过滤逻辑保持一致。
         /// </summary>
         public int GetNodeIndex(DialogueGraph graph)
         {
-            return graph.GetNodes().IndexOf(this);
+            int idx = 0;
+            foreach (var node in graph.GetNodes())
+            {
+                if (node is DialogueNode)
+                {
+                    if (node == this) return idx;
+                    idx++;
+                }
+            }
+            return -1;
         }
     }
 }

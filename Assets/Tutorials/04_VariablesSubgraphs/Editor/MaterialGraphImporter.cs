@@ -7,41 +7,36 @@ namespace GraphToolkitTutorials.VariablesSubgraphs
 {
     /// <summary>
     /// 材质图形资产导入器
-    /// 负责导入.matgraph文件并生成材质数据资产
+    /// 将 .matgraph 文件转换为真实可用的 URP Material 资源
     /// </summary>
     [ScriptedImporter(1, "matgraph")]
-    internal class MaterialGraphImporter : ScriptedImporter
+    public class MaterialGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {
-            // 加载图形
             var graph = GraphDatabase.LoadGraphForImporter<MaterialGraph>(ctx.assetPath);
-
             if (graph == null)
             {
                 Debug.LogError($"Failed to load material graph from {ctx.assetPath}");
                 return;
             }
 
-            // 创建材质数据
-            var materialData = graph.CreateMaterialData();
-
-            if (materialData == null)
+            var material = graph.CreateMaterial();
+            if (material == null)
             {
-                Debug.LogWarning($"Failed to create material data from {ctx.assetPath}");
-                materialData = ScriptableObject.CreateInstance<MaterialData>();
+                Debug.LogWarning($"MaterialGraph: Failed to create material, using fallback. Path: {ctx.assetPath}");
+                material = new UnityEngine.Material(UnityEngine.Shader.Find("Universal Render Pipeline/Lit"));
             }
 
-            materialData.name = Path.GetFileNameWithoutExtension(ctx.assetPath);
+            material.name = Path.GetFileNameWithoutExtension(ctx.assetPath);
 
-            // 添加到资产
-            ctx.AddObjectToAsset("main", materialData);
-            ctx.SetMainObject(materialData);
+            ctx.AddObjectToAsset("main", material);
+            ctx.SetMainObject(material);
 
-            // 添加图形本身作为子资产
-            ctx.AddObjectToAsset("graph", graph);
-
-            Debug.Log($"Material graph imported: BaseColor={materialData.baseColor}, Metallic={materialData.metallic}, Smoothness={materialData.smoothness}");
+            Debug.Log($"Material graph imported: {material.name} " +
+                      $"BaseColor={material.GetColor("_BaseColor")}, " +
+                      $"Metallic={material.GetFloat("_Metallic"):F2}, " +
+                      $"Smoothness={material.GetFloat("_Smoothness"):F2}");
         }
     }
 }

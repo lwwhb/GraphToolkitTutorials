@@ -4,52 +4,41 @@ using UnityEngine.Rendering.Universal;
 
 namespace GraphToolkitTutorials.GraphDrivenURP.Runtime
 {
-    /// <summary>
-    /// 运行时URP节点基类
-    /// </summary>
+    /// <summary>运行时 URP 节点基类。所有子类均使用 [SerializeReference] 多态序列化。</summary>
     [Serializable]
     public abstract class URPRuntimeNode
     {
-        public string nodeType;
         public int nextNodeIndex = -1;
-
-        protected URPRuntimeNode()
-        {
-            nodeType = GetType().Name;
-        }
     }
 
-    // Pipeline Nodes
-    [Serializable]
-    public class PipelineStartNode : URPRuntimeNode { }
+    // ── Pipeline Nodes ──────────────────────────────────────────────────────
 
-    [Serializable]
-    public class PipelineEndNode : URPRuntimeNode { }
+    [Serializable] public class PipelineStartNode : URPRuntimeNode { }
+    [Serializable] public class PipelineEndNode   : URPRuntimeNode { }
 
-    // Pass Nodes
+    // ── Pass Nodes ──────────────────────────────────────────────────────────
+
     [Serializable]
     public class OpaquePassNode : URPRuntimeNode
     {
-        public LayerMask layerMask;
-        public bool enableDynamicBatching;
+        public LayerMask       layerMask;
+        public RenderPassEvent passEvent = RenderPassEvent.AfterRenderingOpaques;
     }
 
     [Serializable]
     public class TransparentPassNode : URPRuntimeNode
     {
-        public LayerMask layerMask;
+        public LayerMask       layerMask;
+        public RenderPassEvent passEvent = RenderPassEvent.AfterRenderingTransparents;
     }
 
-    [Serializable]
-    public class ShadowPassNode : URPRuntimeNode
-    {
-        public int shadowResolution;
-        public int cascadeCount;
-    }
+    /// <summary>标记节点：URP 内部已处理阴影，此节点不发额外 GPU 命令。</summary>
+    [Serializable] public class ShadowPassNode  : URPRuntimeNode { }
 
-    [Serializable]
-    public class SkyboxPassNode : URPRuntimeNode { }
+    /// <summary>标记节点：URP 内部已处理天空盒，此节点不发额外 GPU 命令。</summary>
+    [Serializable] public class SkyboxPassNode  : URPRuntimeNode { }
 
+    /// <summary>标记节点：URP Volume 管理后处理，此节点仅记录配置供参考。</summary>
     [Serializable]
     public class PostProcessPassNode : URPRuntimeNode
     {
@@ -59,44 +48,41 @@ namespace GraphToolkitTutorials.GraphDrivenURP.Runtime
         public bool enableColorGrading;
     }
 
+    /// <summary>自定义 Pass 节点：运行时通过 Blitter.BlitTexture 双 Pass 模式执行。</summary>
     [Serializable]
     public class CustomPassNode : URPRuntimeNode
     {
-        public string passName;
-        public Material material;
-        public RenderPassEvent passEvent;
+        public string         passName;
+        public Material       material;
+        public RenderPassEvent passEvent = RenderPassEvent.AfterRenderingOpaques;
     }
 
-    // Resource Nodes
+    // ── Resource Nodes ──────────────────────────────────────────────────────
+
     [Serializable]
     public class RenderTextureNode : URPRuntimeNode
     {
-        public string textureName;
-        public int width;
-        public int height;
-        public int depthBits;
+        public string              textureName;
+        public int                 width;
+        public int                 height;
+        public int                 depthBits;
         public RenderTextureFormat format;
     }
 
-    [Serializable]
-    public class MaterialNode : URPRuntimeNode
-    {
-        public Material material;
-    }
+    // ── Control Nodes ───────────────────────────────────────────────────────
 
-    // Control Nodes
     [Serializable]
     public class QualityBranchNode : URPRuntimeNode
     {
-        public int minimumQuality;
+        public int minimumQualityForHigh;  // 达到此等级则走 High 路径
         public int highQualityIndex = -1;
-        public int lowQualityIndex = -1;
+        public int lowQualityIndex  = -1;
     }
 
     [Serializable]
     public class PlatformBranchNode : URPRuntimeNode
     {
-        public int pcIndex = -1;
+        public int pcIndex     = -1;
         public int mobileIndex = -1;
     }
 }

@@ -1,14 +1,14 @@
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.BehaviorTree
 {
     /// <summary>
-    /// 序列节点 - 按顺序执行所有子节点，直到一个失败
-    /// 如果所有子节点成功，返回成功；如果任何一个失败，返回失败
+    /// 序列节点 — 按顺序执行所有子节点，直到一个失败。
+    /// 如果所有子节点成功，返回成功；如果任何一个失败，返回失败。
     /// </summary>
-    [Node("Sequence", "Behavior Tree/Composite")]
+    [Node("Composite", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class SequenceNode : CompositeNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -19,26 +19,22 @@ namespace GraphToolkitTutorials.BehaviorTree
 
         public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
         {
-            var runtimeNode = new Runtime.SequenceNode();
-
             var children = GetChildren(graph);
-            runtimeNode.childIndices = new int[children.Count];
-
+            var childIndices = new int[children.Count];
             for (int i = 0; i < children.Count; i++)
-            {
-                runtimeNode.childIndices[i] = children[i].GetNodeIndex(graph);
-            }
+                childIndices[i] = children[i].GetNodeIndex(graph);
 
-            return runtimeNode;
+            return new Runtime.SequenceNode { childIndices = childIndices };
         }
     }
 
     /// <summary>
-    /// 选择节点 - 按顺序执行子节点，直到一个成功
-    /// 如果任何一个子节点成功，返回成功；如果所有失败，返回失败
+    /// 选择节点 — 按顺序执行子节点，直到一个成功。
+    /// 如果任何一个子节点成功，返回成功；如果所有失败，返回失败。
     /// </summary>
-    [Node("Selector", "Behavior Tree/Composite")]
+    [Node("Composite", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class SelectorNode : CompositeNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -49,25 +45,22 @@ namespace GraphToolkitTutorials.BehaviorTree
 
         public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
         {
-            var runtimeNode = new Runtime.SelectorNode();
-
             var children = GetChildren(graph);
-            runtimeNode.childIndices = new int[children.Count];
-
+            var childIndices = new int[children.Count];
             for (int i = 0; i < children.Count; i++)
-            {
-                runtimeNode.childIndices[i] = children[i].GetNodeIndex(graph);
-            }
+                childIndices[i] = children[i].GetNodeIndex(graph);
 
-            return runtimeNode;
+            return new Runtime.SelectorNode { childIndices = childIndices };
         }
     }
 
     /// <summary>
-    /// 并行节点 - 同时执行所有子节点
+    /// 并行节点 — 同时执行所有子节点。
+    /// SuccessPolicy 控制何时视为整体成功。
     /// </summary>
-    [Node("Parallel", "Behavior Tree/Composite")]
+    [Node("Composite", "")]
     [UseWithGraph(typeof(BehaviorTreeGraph))]
+    [System.Serializable]
     internal class ParallelNode : CompositeNode
     {
         public enum SuccessPolicy
@@ -76,8 +69,7 @@ namespace GraphToolkitTutorials.BehaviorTree
             RequireOne     // 任意一个子节点成功就成功
         }
 
-        [SerializeField]
-        private SuccessPolicy m_SuccessPolicy = SuccessPolicy.RequireAll;
+        private INodeOption m_SuccessPolicyOption;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
@@ -85,27 +77,26 @@ namespace GraphToolkitTutorials.BehaviorTree
             AddChildrenPort(context);
         }
 
-        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
-        {
-            var runtimeNode = new Runtime.ParallelNode
-            {
-                successPolicy = m_SuccessPolicy
-            };
-
-            var children = GetChildren(graph);
-            runtimeNode.childIndices = new int[children.Count];
-
-            for (int i = 0; i < children.Count; i++)
-            {
-                runtimeNode.childIndices[i] = children[i].GetNodeIndex(graph);
-            }
-
-            return runtimeNode;
-        }
-
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Success Policy", () => m_SuccessPolicy, v => m_SuccessPolicy = v).Build();
+            m_SuccessPolicyOption = context.AddOption<SuccessPolicy>("Success Policy").Build();
+        }
+
+        public override Runtime.BTRuntimeNode CreateRuntimeNode(BehaviorTreeGraph graph)
+        {
+            SuccessPolicy policy = SuccessPolicy.RequireAll;
+            m_SuccessPolicyOption?.TryGetValue(out policy);
+
+            var children = GetChildren(graph);
+            var childIndices = new int[children.Count];
+            for (int i = 0; i < children.Count; i++)
+                childIndices[i] = children[i].GetNodeIndex(graph);
+
+            return new Runtime.ParallelNode
+            {
+                successPolicy = (Runtime.ParallelNode.SuccessPolicy)(int)policy,
+                childIndices  = childIndices
+            };
         }
     }
 }

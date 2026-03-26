@@ -48,7 +48,7 @@ namespace GraphToolkitTutorials.DataFlow
             var connectedOffsetPort = graph.GetConnectedOutputPort(m_OffsetInput);
             if (connectedOffsetPort != null)
             {
-                offset = graph.EvaluateVector2Port(connectedResolutionPort);
+                offset = graph.EvaluateVector2Port(connectedOffsetPort);
             }
             else
             {

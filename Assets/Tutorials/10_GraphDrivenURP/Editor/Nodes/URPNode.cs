@@ -1,27 +1,20 @@
+using System;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.GraphDrivenURP
 {
     /// <summary>
-    /// URP节点基类
-    /// 所有URP渲染节点都继承自此类
+    /// URP节点基类。
+    /// 教学重点：
+    ///   • GetNextNode 使用 graph.FindNodeForPort（IPort 无 .Node 属性，必须遍历查找）
+    ///   • GetNodeIndex 只计数 URPNode 实例，与 CreateRuntimeGraph 过滤逻辑对齐
     /// </summary>
+    [Serializable]
     internal abstract class URPNode : Node
     {
-        /// <summary>
-        /// 执行输入端口
-        /// </summary>
         protected IPort m_ExecutionIn;
-
-        /// <summary>
-        /// 执行输出端口
-        /// </summary>
         protected IPort m_ExecutionOut;
 
-        /// <summary>
-        /// 添加执行端口
-        /// </summary>
         protected void AddExecutionPorts(IPortDefinitionContext context)
         {
             m_ExecutionIn = context.AddInputPort("In")
@@ -34,29 +27,37 @@ namespace GraphToolkitTutorials.GraphDrivenURP
         }
 
         /// <summary>
-        /// 获取下一个节点
+        /// 获取执行流中的下一个节点。
+        /// 注意：必须用 graph.FindNodeForPort，不能用 connectedPort.Node（IPort 无此属性）。
         /// </summary>
         public URPNode GetNextNode(URPGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_ExecutionOut);
-            if (connectedPort != null && connectedPort.Node is URPNode urpNode)
-            {
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is URPNode urpNode)
                 return urpNode;
-            }
             return null;
         }
 
-        /// <summary>
-        /// 创建运行时节点
-        /// </summary>
+        /// <summary>创建对应的运行时节点数据。</summary>
         public abstract Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph);
 
         /// <summary>
-        /// 获取节点在图形中的索引
+        /// 获取此节点在运行时图（runtimeGraph.nodes）中的整数索引。
+        /// 注意：只计数 URPNode 实例，与 CreateRuntimeGraph 中的过滤逻辑保持一致。
+        ///       若使用 GetNodes() 全列表索引，遇到非 URPNode 元素时索引会错位。
         /// </summary>
         public int GetNodeIndex(URPGraph graph)
         {
-            return graph.GetNodes().IndexOf(this);
+            int idx = 0;
+            foreach (var node in graph.GetNodes())
+            {
+                if (node is URPNode)
+                {
+                    if (node == this) return idx;
+                    idx++;
+                }
+            }
+            return -1;
         }
     }
 }

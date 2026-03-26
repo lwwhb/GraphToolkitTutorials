@@ -1,157 +1,181 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.RendererUtils;
 
 namespace GraphToolkitTutorials.GraphDrivenURP.Runtime
 {
     /// <summary>
-    /// 完整的图形驱动URP渲染器特性
-    /// 终极目标：通过图形编辑器完全控制URP渲染管线
+    /// 图形驱动的 URP 渲染器特性。
+    ///
+    /// 教学要点：
+    ///   • 使用 RecordRenderGraph（Unity 6 URP 唯一入口）替代旧版 Execute
+    ///   • 每个图节点独立调用 AddRasterRenderPass → Frame Debugger 每节点一个条目
+    ///   • 分支节点（Quality / Platform）在 RecordRenderGraph 阶段决策，非 GPU 阶段
+    ///   • Blit 使用双 Pass 模式，避免同一 RasterPass 内对同一纹理同时读写
+    ///
+    /// 配置步骤：
+    ///   1. URP Renderer Inspector → Add Renderer Feature → Graph Driven URP Feature
+    ///   2. 将 .urpgraph 资产（生成的 URPGraphRuntime）拖入 URP Graph 字段
     /// </summary>
     public class GraphDrivenURPFeature : ScriptableRendererFeature
     {
-        [SerializeField]
-        private URPGraphRuntime m_URPGraph;
+        [SerializeField] private URPGraphRuntime m_URPGraph;
 
-        [SerializeField]
-        private bool m_EnableDebugLog = false;
-
-        private GraphDrivenURPPass m_URPPass;
+        private GraphDrivenURPPass m_Pass;
 
         public override void Create()
         {
             if (m_URPGraph != null)
-            {
-                m_URPPass = new GraphDrivenURPPass(m_URPGraph, m_EnableDebugLog);
-            }
+                m_Pass = new GraphDrivenURPPass(m_URPGraph);
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (m_URPPass != null && m_URPGraph != null)
-            {
-                renderer.EnqueuePass(m_URPPass);
-            }
+            if (m_URPGraph == null) return;
+
+            // 延迟初始化：Create() 可能在 m_URPGraph 尚未反序列化时被调用
+            if (m_Pass == null)
+                m_Pass = new GraphDrivenURPPass(m_URPGraph);
+
+            renderer.EnqueuePass(m_Pass);
         }
 
         protected override void Dispose(bool disposing)
         {
-            m_URPPass?.Dispose();
+            m_Pass?.Dispose();
         }
     }
 
     /// <summary>
-    /// 图形驱动的URP渲染Pass
+    /// 图形驱动的 URP RenderGraph Pass。
+    ///
+    /// 每节点一个 Pass 架构：
+    ///   遍历运行时图，每个有效节点调用 AddRasterRenderPass，
+    ///   使 Frame Debugger 中每个节点显示为独立条目。
+    ///
+    /// 支持的节点类型：
+    ///   OpaquePassNode       → DrawRendererList（不透明队列，前到后排序）
+    ///   TransparentPassNode  → DrawRendererList（透明队列，后到前排序）
+    ///   CustomPassNode       → Blitter.BlitTexture 双 Pass（material 后处理）
+    ///   QualityBranchNode    → QualitySettings.GetQualityLevel() 条件跳转
+    ///   PlatformBranchNode   → Application.isMobilePlatform 条件跳转
+    ///   ShadowPassNode       → 跳过（URP 内置处理，标记节点）
+    ///   SkyboxPassNode       → 跳过（URP 内置处理，标记节点）
+    ///   PostProcessPassNode  → 跳过（URP Volume 系统处理，标记节点）
+    ///   PipelineEndNode      → 终止遍历
     /// </summary>
-    public class GraphDrivenURPPass : ScriptableRenderPass
+    internal class GraphDrivenURPPass : ScriptableRenderPass
     {
-        private URPGraphRuntime m_URPGraph;
-        private bool m_EnableDebugLog;
-        private const string k_ProfilerTag = "Graph Driven URP";
+        private readonly URPGraphRuntime m_URPGraph;
 
-        // 资源池
-        private System.Collections.Generic.Dictionary<string, RenderTexture> m_RenderTexturePool;
-
-        public GraphDrivenURPPass(URPGraphRuntime urpGraph, bool enableDebugLog)
+        // DrawRendererList 所需的 ShaderTag，匹配 URP 标准着色器 LightMode
+        private static readonly ShaderTagId[] k_ShaderTagIds =
         {
-            m_URPGraph = urpGraph;
-            m_EnableDebugLog = enableDebugLog;
-            m_RenderTexturePool = new System.Collections.Generic.Dictionary<string, RenderTexture>();
-            renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
+            new ShaderTagId("SRPDefaultUnlit"),
+            new ShaderTagId("UniversalForward"),
+            new ShaderTagId("UniversalForwardOnly"),
+        };
+
+        // ─── Pass Data ───────────────────────────────────────────────────────
+        // PassData 通过 RenderGraph Pass 生命周期传递，避免直接闭包捕获外部变量
+
+        private class DrawPassData
+        {
+            public RendererListHandle rendererListHandle;
         }
 
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        private class BlitPassData
         {
-            if (m_URPGraph == null)
-                return;
-
-            CommandBuffer cmd = CommandBufferPool.Get(k_ProfilerTag);
-
-            try
-            {
-                if (m_EnableDebugLog)
-                {
-                    Debug.Log("=== Graph Driven URP Execution Start ===");
-                }
-
-                // 执行URP图形
-                ExecuteURPGraph(cmd, context, ref renderingData);
-
-                context.ExecuteCommandBuffer(cmd);
-            }
-            finally
-            {
-                CommandBufferPool.Release(cmd);
-            }
+            public TextureHandle sourceTexture;
+            public Material      material;
         }
 
-        private void ExecuteURPGraph(CommandBuffer cmd, ScriptableRenderContext context, ref RenderingData renderingData)
+        public GraphDrivenURPPass(URPGraphRuntime graph)
         {
+            m_URPGraph      = graph;
+            renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        }
+
+        /// <summary>
+        /// RecordRenderGraph：遍历运行时图，每节点独立添加一个 RenderGraph Pass。
+        ///
+        /// 与旧版 Execute 的区别：
+        ///   旧：Execute(ScriptableRenderContext, ref RenderingData) + CommandBufferPool
+        ///   新：RecordRenderGraph 声明资源依赖，SetRenderFunc 提交 GPU 命令
+        ///
+        /// ContextContainer 三个数据对象：
+        ///   UniversalResourceData  → 当前帧颜色/深度 TextureHandle
+        ///   UniversalCameraData    → Camera 对象（DrawRendererList 排序需要）
+        ///   UniversalRenderingData → CullingResults（DrawRendererList 裁剪需要）
+        /// </summary>
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+        {
+            if (m_URPGraph == null) return;
+
             var startNode = m_URPGraph.GetStartNode();
             if (startNode == null)
             {
-                Debug.LogWarning("No start node found in URP graph");
+                Debug.LogWarning("[GraphDrivenURP] No PipelineStartNode in runtime graph. " +
+                                 "Re-import the .urpgraph asset.");
                 return;
             }
 
-            int currentNodeIndex = startNode.nextNodeIndex;
+            var resourceData  = frameData.Get<UniversalResourceData>();
+            var cameraData    = frameData.Get<UniversalCameraData>();
+            var renderingData = frameData.Get<UniversalRenderingData>();
 
-            while (currentNodeIndex >= 0)
+            // 诊断日志：首帧输出节点数与起始索引，帮助确认图正确导入
+            if (Time.frameCount <= 2)
+                Debug.Log($"[GraphDrivenURP] Recording: {m_URPGraph.nodes.Count} nodes, " +
+                          $"startIndex={m_URPGraph.startNodeIndex}, " +
+                          $"activeColorValid={resourceData.activeColorTexture.IsValid()}");
+
+            int current = startNode.nextNodeIndex;
+            while (current >= 0)
             {
-                var node = m_URPGraph.GetNode(currentNodeIndex);
-                if (node == null)
-                    break;
+                var node = m_URPGraph.GetNode(current);
+                if (node == null) break;
 
-                if (m_EnableDebugLog)
+                if (node is OpaquePassNode opaque)
                 {
-                    Debug.Log($"Executing node: {node.nodeType}");
+                    // 教学重点：DrawRendererList 不透明物体 Pass
+                    RecordDrawPass(renderGraph, resourceData, cameraData, renderingData,
+                        "Graph: Opaque Pass",
+                        RenderQueueRange.opaque,
+                        SortingCriteria.CommonOpaque,
+                        opaque.layerMask);
+                    current = opaque.nextNodeIndex;
                 }
-
-                // 执行节点
-                int nextIndex = -1;
-
-                if (node is OpaquePassNode opaqueNode)
+                else if (node is TransparentPassNode transparent)
                 {
-                    ExecuteOpaquePass(cmd, opaqueNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
+                    // 教学重点：DrawRendererList 透明物体 Pass（后到前排序）
+                    RecordDrawPass(renderGraph, resourceData, cameraData, renderingData,
+                        "Graph: Transparent Pass",
+                        RenderQueueRange.transparent,
+                        SortingCriteria.CommonTransparent,
+                        transparent.layerMask);
+                    current = transparent.nextNodeIndex;
                 }
-                else if (node is TransparentPassNode transparentNode)
+                else if (node is CustomPassNode custom)
                 {
-                    ExecuteTransparentPass(cmd, transparentNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
+                    // 教学重点：Blitter.BlitTexture 双 Pass 模式后处理
+                    if (custom.material != null)
+                        RecordBlitPass(renderGraph, resourceData, custom);
+                    current = custom.nextNodeIndex;
                 }
-                else if (node is ShadowPassNode shadowNode)
+                else if (node is QualityBranchNode quality)
                 {
-                    ExecuteShadowPass(cmd, shadowNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
+                    // 教学重点：分支节点在 RecordRenderGraph 阶段（CPU）决策，不是 GPU 命令
+                    current = QualitySettings.GetQualityLevel() >= quality.minimumQualityForHigh
+                        ? quality.highQualityIndex
+                        : quality.lowQualityIndex;
                 }
-                else if (node is SkyboxPassNode skyboxNode)
+                else if (node is PlatformBranchNode platform)
                 {
-                    ExecuteSkyboxPass(cmd, skyboxNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
-                }
-                else if (node is PostProcessPassNode postProcessNode)
-                {
-                    ExecutePostProcessPass(cmd, postProcessNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
-                }
-                else if (node is CustomPassNode customNode)
-                {
-                    ExecuteCustomPass(cmd, customNode, ref renderingData);
-                    nextIndex = node.nextNodeIndex;
-                }
-                else if (node is RenderTextureNode rtNode)
-                {
-                    CreateRenderTexture(rtNode);
-                    nextIndex = node.nextNodeIndex;
-                }
-                else if (node is QualityBranchNode qualityNode)
-                {
-                    nextIndex = EvaluateQualityBranch(qualityNode);
-                }
-                else if (node is PlatformBranchNode platformNode)
-                {
-                    nextIndex = EvaluatePlatformBranch(platformNode);
+                    // 教学重点：平台分支在 RecordRenderGraph 阶段决策
+                    current = Application.isMobilePlatform ? platform.mobileIndex : platform.pcIndex;
                 }
                 else if (node is PipelineEndNode)
                 {
@@ -159,128 +183,125 @@ namespace GraphToolkitTutorials.GraphDrivenURP.Runtime
                 }
                 else
                 {
-                    nextIndex = node.nextNodeIndex;
+                    // ShadowPassNode / SkyboxPassNode / PostProcessPassNode 为标记节点，
+                    // 对应功能由 URP 内置 Pass 处理，此处直接跳过
+                    current = node.nextNodeIndex;
                 }
-
-                currentNodeIndex = nextIndex;
-            }
-
-            if (m_EnableDebugLog)
-            {
-                Debug.Log("=== Graph Driven URP Execution End ===");
             }
         }
 
-        private void ExecuteOpaquePass(CommandBuffer cmd, OpaquePassNode node, ref RenderingData renderingData)
+        /// <summary>
+        /// 为一个绘制节点记录 DrawRendererList Pass（教学参考：T09 RecordRenderPassNode）。
+        ///
+        /// Frame Debugger 可见性原理：
+        ///   AddRasterRenderPass + SetRenderAttachment 触发 RenderGraph 自动插入 SetRenderTarget，
+        ///   该 SetRenderTarget 命令使此 Pass 在 Frame Debugger 中出现独立条目。
+        ///   单靠 BeginSample/EndSample 是 CPU Profiler 标记，Frame Debugger 不可见。
+        /// </summary>
+        private void RecordDrawPass(
+            RenderGraph            rg,
+            UniversalResourceData  resourceData,
+            UniversalCameraData    cameraData,
+            UniversalRenderingData renderingData,
+            string                 passName,
+            RenderQueueRange       renderQueueRange,
+            SortingCriteria        sortingCriteria,
+            LayerMask              layerMask)
         {
-            cmd.BeginSample("Opaque Pass");
-            // 简化实现：实际应用中需要完整的渲染逻辑
-            // 这里可以添加绘制不透明物体的代码
-            cmd.EndSample("Opaque Pass");
-        }
-
-        private void ExecuteTransparentPass(CommandBuffer cmd, TransparentPassNode node, ref RenderingData renderingData)
-        {
-            cmd.BeginSample("Transparent Pass");
-            // 简化实现：绘制透明物体
-            cmd.EndSample("Transparent Pass");
-        }
-
-        private void ExecuteShadowPass(CommandBuffer cmd, ShadowPassNode node, ref RenderingData renderingData)
-        {
-            cmd.BeginSample("Shadow Pass");
-            // 简化实现：渲染阴影贴图
-            cmd.EndSample("Shadow Pass");
-        }
-
-        private void ExecuteSkyboxPass(CommandBuffer cmd, SkyboxPassNode node, ref RenderingData renderingData)
-        {
-            cmd.BeginSample("Skybox Pass");
-            // 简化实现：渲染天空盒
-            cmd.EndSample("Skybox Pass");
-        }
-
-        private void ExecutePostProcessPass(CommandBuffer cmd, PostProcessPassNode node, ref RenderingData renderingData)
-        {
-            cmd.BeginSample("Post Process Pass");
-            // 简化实现：应用后处理效果
-            if (node.enableBloom)
+            if (!resourceData.activeColorTexture.IsValid())
             {
-                cmd.BeginSample("Bloom");
-                // Bloom效果
-                cmd.EndSample("Bloom");
+                Debug.LogWarning($"[GraphDrivenURP] '{passName}': activeColorTexture is invalid. " +
+                                 "Ensure a URP Renderer with this feature is active for the camera.");
+                return;
             }
-            if (node.enableTonemapping)
+
+            using var builder = rg.AddRasterRenderPass<DrawPassData>(passName, out var passData);
+
+            // RendererListDesc：描述要绘制哪些对象（队列范围、排序、层遮罩）
+            var desc = new RendererListDesc(k_ShaderTagIds, renderingData.cullResults, cameraData.camera)
             {
-                cmd.BeginSample("Tonemapping");
-                // Tonemapping
-                cmd.EndSample("Tonemapping");
-            }
-            cmd.EndSample("Post Process Pass");
+                sortingCriteria  = sortingCriteria,
+                renderQueueRange = renderQueueRange,
+                layerMask        = layerMask,
+            };
+            passData.rendererListHandle = rg.CreateRendererList(desc);
+
+            builder.UseRendererList(passData.rendererListHandle);  // 防止 Pass 被 RenderGraph 裁剪
+            builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
+            if (resourceData.activeDepthTexture.IsValid())
+                builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.ReadWrite);
+            builder.AllowPassCulling(false);
+
+            builder.SetRenderFunc((DrawPassData data, RasterGraphContext ctx) =>
+            {
+                ctx.cmd.DrawRendererList(data.rendererListHandle);
+            });
         }
 
-        private void ExecuteCustomPass(CommandBuffer cmd, CustomPassNode node, ref RenderingData renderingData)
+        /// <summary>
+        /// 为 CustomPassNode 记录 Blit Pass（双 Pass 模式）。
+        ///
+        /// 为何需要双 Pass：
+        ///   同一 RasterPass 内不能同时 UseTexture（读）和 SetRenderAttachment（写）同一纹理。
+        ///   解决方案：
+        ///     Pass A：activeColor --read--> material 处理 --write--> tempTexture
+        ///     Pass B：tempTexture --read--> 原样复制     --write--> activeColor
+        ///
+        /// 对比旧版 CommandBuffer.Blit：
+        ///   旧：cmd.Blit(source, destination, material)
+        ///   新：Blitter.BlitTexture(cmd, source, scaleBias, material, passIndex)
+        ///       渲染目标由 SetRenderAttachment 声明，不作为 Blitter 参数
+        /// </summary>
+        private void RecordBlitPass(
+            RenderGraph           rg,
+            UniversalResourceData resourceData,
+            CustomPassNode        node)
         {
-            cmd.BeginSample(node.passName);
-            // 简化实现：执行自定义Pass
-            if (node.material != null)
+            if (!resourceData.activeColorTexture.IsValid())
             {
-                // 使用自定义材质进行渲染
+                Debug.LogWarning($"[GraphDrivenURP] Blit pass '{node.passName}': activeColorTexture is invalid. " +
+                                 "Ensure a URP Renderer with this feature is active for the camera.");
+                return;
             }
-            cmd.EndSample(node.passName);
-        }
 
-        private void CreateRenderTexture(RenderTextureNode node)
-        {
-            if (!m_RenderTexturePool.ContainsKey(node.textureName))
+            var tempDesc         = rg.GetTextureDesc(resourceData.activeColorTexture);
+            tempDesc.name        = "URPGraph_Blit_Temp";
+            tempDesc.clearBuffer = false;
+            var tempTexture      = rg.CreateTexture(tempDesc);
+
+            // Pass A：activeColor → tempTexture（material 后处理）
+            using (var builder = rg.AddRasterRenderPass<BlitPassData>("Graph: " + node.passName, out var pd))
             {
-                var rt = new RenderTexture(node.width, node.height, node.depthBits, node.format);
-                rt.name = node.textureName;
-                m_RenderTexturePool[node.textureName] = rt;
+                pd.sourceTexture = resourceData.activeColorTexture;
+                pd.material      = node.material;
 
-                if (m_EnableDebugLog)
+                builder.UseTexture(resourceData.activeColorTexture, AccessFlags.Read);
+                builder.SetRenderAttachment(tempTexture, 0, AccessFlags.Write);
+                builder.AllowPassCulling(false);
+
+                builder.SetRenderFunc((BlitPassData data, RasterGraphContext ctx) =>
                 {
-                    Debug.Log($"Created RenderTexture: {node.textureName} ({node.width}x{node.height})");
-                }
-            }
-        }
-
-        private int EvaluateQualityBranch(QualityBranchNode node)
-        {
-            int currentQuality = QualitySettings.GetQualityLevel();
-            bool useHighQuality = currentQuality >= node.minimumQuality;
-
-            if (m_EnableDebugLog)
-            {
-                Debug.Log($"Quality Branch: Current={currentQuality}, Minimum={node.minimumQuality}, UseHigh={useHighQuality}");
+                    Blitter.BlitTexture(ctx.cmd, data.sourceTexture, new Vector4(1, 1, 0, 0), data.material, 0);
+                });
             }
 
-            return useHighQuality ? node.highQualityIndex : node.lowQualityIndex;
-        }
-
-        private int EvaluatePlatformBranch(PlatformBranchNode node)
-        {
-            bool isMobile = Application.isMobilePlatform;
-
-            if (m_EnableDebugLog)
+            // Pass B：tempTexture → activeColor（复制回颜色缓冲）
+            using (var builder = rg.AddRasterRenderPass<BlitPassData>("Graph: " + node.passName + " Copy Back", out var pd))
             {
-                Debug.Log($"Platform Branch: IsMobile={isMobile}");
-            }
+                pd.sourceTexture = tempTexture;
+                pd.material      = null;
 
-            return isMobile ? node.mobileIndex : node.pcIndex;
-        }
+                builder.UseTexture(tempTexture, AccessFlags.Read);
+                builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
+                builder.AllowPassCulling(false);
 
-        public void Dispose()
-        {
-            // 清理RenderTexture池
-            foreach (var rt in m_RenderTexturePool.Values)
-            {
-                if (rt != null)
+                builder.SetRenderFunc((BlitPassData data, RasterGraphContext ctx) =>
                 {
-                    rt.Release();
-                }
+                    Blitter.BlitTexture(ctx.cmd, data.sourceTexture, new Vector4(1, 1, 0, 0), 0, false);
+                });
             }
-            m_RenderTexturePool.Clear();
         }
+
+        public void Dispose() { }
     }
 }

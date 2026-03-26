@@ -1,20 +1,21 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
 namespace GraphToolkitTutorials.DialogueSystem
 {
     /// <summary>
-    /// 起始对话节点 - 对话的起点
+    /// 起始对话节点 - 对话的起点，有且只有一个
     /// </summary>
-    [Node("Start", "Dialogue")]
+    [Node("Dialogue", "")]
     [UseWithGraph(typeof(DialogueGraph))]
+    [Serializable]
     internal class StartDialogueNode : DialogueNode
     {
         private IPort m_OutputPort;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
-            // 起始节点只有输出端口
             m_OutputPort = context.AddOutputPort("Out")
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
                 .Build();
@@ -23,111 +24,85 @@ namespace GraphToolkitTutorials.DialogueSystem
         public DialogueNode GetNextNode(DialogueGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_OutputPort);
-            if (connectedPort != null && connectedPort.Node is DialogueNode dialogueNode)
-            {
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is DialogueNode dialogueNode)
                 return dialogueNode;
-            }
             return null;
         }
 
         public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
         {
-            var runtimeNode = new Runtime.StartNode();
-
             var nextNode = GetNextNode(graph);
-            if (nextNode != null)
+            return new Runtime.StartNode
             {
-                runtimeNode.nextNodeIndex = nextNode.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.nextNodeIndex = -1;
-            }
-
-            return runtimeNode;
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 对话文本节点 - 显示对话内容
+    /// 对话文本节点 - 显示说话人名称、头像和对话内容
     /// </summary>
-    [Node("Dialogue", "Dialogue")]
+    [Node("Dialogue", "")]
     [UseWithGraph(typeof(DialogueGraph))]
+    [Serializable]
     internal class DialogueTextNode : DialogueNode
     {
-        [SerializeField]
-        private string m_SpeakerName = "Character";
-
-        [SerializeField]
-        [TextArea(3, 10)]
-        private string m_DialogueText = "Hello!";
-
-        [SerializeField]
-        private Sprite m_SpeakerPortrait;
-
+        private INodeOption m_SpeakerNameOption;
+        private INodeOption m_DialogueTextOption;
+        private INodeOption m_PortraitOption;
         private IPort m_OutputPort;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddInputPort(context);
-
             m_OutputPort = context.AddOutputPort("Out")
                 .WithConnectorUI(PortConnectorUI.Arrowhead)
                 .Build();
         }
 
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            m_SpeakerNameOption  = context.AddOption<string>("Speaker Name").Delayed().Build();
+            m_DialogueTextOption = context.AddOption<string>("Dialogue Text").AsTextArea().Delayed().Build();
+            m_PortraitOption     = context.AddOption<Sprite>("Portrait").Build();
+        }
+
         public DialogueNode GetNextNode(DialogueGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_OutputPort);
-            if (connectedPort != null && connectedPort.Node is DialogueNode dialogueNode)
-            {
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is DialogueNode dialogueNode)
                 return dialogueNode;
-            }
             return null;
         }
 
         public override Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph)
         {
-            var runtimeNode = new Runtime.DialogueTextNode
-            {
-                speakerName = m_SpeakerName,
-                dialogueText = m_DialogueText,
-                speakerPortrait = m_SpeakerPortrait
-            };
+            string speakerName = "Character";
+            m_SpeakerNameOption?.TryGetValue(out speakerName);
+
+            string dialogueText = "";
+            m_DialogueTextOption?.TryGetValue(out dialogueText);
+
+            Sprite portrait = null;
+            m_PortraitOption?.TryGetValue(out portrait);
 
             var nextNode = GetNextNode(graph);
-            if (nextNode != null)
+            return new Runtime.DialogueTextNode
             {
-                runtimeNode.nextNodeIndex = nextNode.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.nextNodeIndex = -1;
-            }
-
-            return runtimeNode;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Speaker Name", () => m_SpeakerName, v => m_SpeakerName = v)
-                .Delayed()
-                .Build();
-
-            context.AddOption("Dialogue Text", () => m_DialogueText, v => m_DialogueText = v)
-                .Delayed()
-                .Build();
-
-            context.AddOption("Portrait", () => m_SpeakerPortrait, v => m_SpeakerPortrait = v)
-                .Build();
+                speakerName     = speakerName  ?? "Character",
+                dialogueText    = dialogueText ?? "",
+                speakerPortrait = portrait,
+                nextNodeIndex   = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
     /// 结束节点 - 对话结束
     /// </summary>
-    [Node("End", "Dialogue")]
+    [Node("Dialogue", "")]
     [UseWithGraph(typeof(DialogueGraph))]
+    [Serializable]
     internal class EndDialogueNode : DialogueNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
