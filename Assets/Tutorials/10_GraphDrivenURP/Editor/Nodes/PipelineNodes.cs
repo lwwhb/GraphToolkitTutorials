@@ -1,13 +1,12 @@
+using System;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
 
 namespace GraphToolkitTutorials.GraphDrivenURP
 {
-    /// <summary>
-    /// 管线起始节点
-    /// </summary>
+    /// <summary>管线起始节点 — 图的执行入口，只有 Out 端口。</summary>
     [Node("Pipeline Start", "URP")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class PipelineStartNode : URPNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
@@ -19,27 +18,18 @@ namespace GraphToolkitTutorials.GraphDrivenURP
 
         public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
         {
-            var runtimeNode = new Runtime.PipelineStartNode();
-
             var nextNode = GetNextNode(graph);
-            if (nextNode != null)
+            return new Runtime.PipelineStartNode
             {
-                runtimeNode.nextNodeIndex = nextNode.GetNodeIndex(graph);
-            }
-            else
-            {
-                runtimeNode.nextNodeIndex = -1;
-            }
-
-            return runtimeNode;
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
-    /// <summary>
-    /// 管线结束节点
-    /// </summary>
+    /// <summary>管线结束节点 — 图的执行终点，只有 In 端口。</summary>
     [Node("Pipeline End", "URP")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class PipelineEndNode : URPNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)

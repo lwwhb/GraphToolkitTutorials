@@ -139,13 +139,19 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 
 ---
 
-### 阶段四：渲染图（规划中）
+#### [教程10: 完整图形化渲染管线](10_GraphDrivenURP.md)
+**难度**: ⭐⭐⭐⭐⭐
+**时间**: 5-6小时
 
-以下教程正在开发中，将在后续版本中发布。
+实现完全由节点图驱动的 URP 渲染管线：
+- 多类型 Pass 节点：Opaque / Transparent / Shadow / Skybox / Post Process / Custom Pass
+- 条件渲染：`QualityBranchNode`（质量等级分支）和 `PlatformBranchNode`（平台分支）在 CPU 阶段决策
+- `Blitter.BlitTexture` 双 Pass 模式（CustomPassNode 全屏后处理效果）
+- `[SerializeReference]` 多态序列化与运行时 `is` 类型检查
+- `AddOption<T>().Build()` + `TryGetValue` — GraphToolkit 唯一有效的选项 API 模式
+- `ScriptableRendererFeature` 集成：`AddRenderPasses` → `EnqueuePass` → `RecordRenderGraph`
 
-| 教程 | 主题 | 核心概念 |
-|------|------|---------|
-| 教程10 | 完整图形化渲染管线 | 完整 URP 渲染 Pass 库，条件渲染 |
+**关键收获**: 综合运用全系列技术，实现生产级图形化渲染管线原型
 
 ---
 
@@ -157,7 +163,7 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 3. 根据需求选择教程4（数据流方向）或教程6（执行流方向）
 
 ### 完整学习路径（适合深入掌握）
-按顺序完成所有教程1-9
+按顺序完成所有教程1-10
 
 ### 专项学习路径
 
@@ -173,7 +179,7 @@ Unity 6 GraphToolkit 完整教程，从基础到高级应用。
 
 | 特性 | 数据流（Pull） | 执行流（Push） |
 |------|--------------|--------------|
-| 典型教程 | 1, 2, 4, 5 | 3, 6, 7, 8, 9 |
+| 典型教程 | 1, 2, 4, 5 | 3, 6, 7, 8, 9, 10 |
 | 求值时机 | 导入时（ScriptedImporter） | 运行时（MonoBehaviour） |
 | 连线方向 | 数据从源节点流向目标 | 执行顺序从上游流向下游 |
 | 等待/异步 | 不支持 | 支持（协程 yield） |
@@ -265,6 +271,16 @@ A: MIT 许可证，可自由使用和修改。
 ---
 
 ## 版本历史
+
+### v4.0.0 (2026-03-25)
+- 完成教程10（完整图形化渲染管线）
+- 教程10：多类型 Pass 节点（Opaque / Transparent / Shadow / Skybox / Post Process / Custom Pass）
+- 教程10：Quality Branch + Platform Branch 条件渲染（CPU 阶段决策）
+- 教程10：`Blitter.BlitTexture` 双 Pass 全屏后处理模式
+- 教程10：`AddOption<T>().Build()` + `TryGetValue` — 所有类型唯一有效的选项 API
+- 教程10：`[SerializeReference]` 多态序列化（`[SerializeField]` 会导致 is 检查失败）
+- 教程10新增：`URPGraphTester` 诊断 MonoBehaviour（OnGUI 节点链条可视化）
+- 阶段三更新为包含教程9+10，移除"阶段四规划中"
 
 ### v3.1.0 (2026-03-25)
 - 完成教程9（渲染图基础）

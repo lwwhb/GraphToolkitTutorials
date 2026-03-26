@@ -1,52 +1,25 @@
+using System;
 using Unity.GraphToolkit.Editor;
-using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 namespace GraphToolkitTutorials.RenderGraphAPI
 {
     /// <summary>
-    /// 不透明物体渲染Pass（新RenderGraph API）
+    /// 渲染通道节点 — ContextNode，通过内嵌 BlockNode 描述一组 GPU 操作。
+    ///
+    /// 教学要点（ContextNode 核心模式）：
+    ///   • 继承 RenderGraphNode（ContextNode），可容纳多个 BlockNode
+    ///   • CreateRuntimeNode 遍历 BlockNodes，将每个 BlockNode 转为对应 PassOperation
+    ///   • Graph.GetNodes() 不包含 BlockNode，必须通过 ContextNode.BlockNodes 属性访问
+    ///   • 同一通道内可组合 Clear → DrawOpaque → DrawTransparent 等多种操作
+    ///
+    /// 与 Tutorial 10 的对比：
+    ///   T10：每种操作对应独立节点（OpaquePassNode、TransparentPassNode 等）
+    ///   T11：一个 RenderPassNode（ContextNode）内嵌多个 BlockNode，灵活组合操作
     /// </summary>
-    [Node("Opaque Pass (New API)", "RenderGraph/Passes")]
+    [Node("RenderGraphPass", "")]
     [UseWithGraph(typeof(NewRenderGraph))]
-    internal class OpaquePassNode : RenderGraphNode
-    {
-        [SerializeField] private bool m_EnableDynamicBatching = true;
-        [SerializeField] private bool m_EnableInstancing = true;
-
-        protected override void OnDefinePorts(IPortDefinitionContext context)
-        {
-            AddExecutionPorts(context);
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Dynamic Batching",
-                () => m_EnableDynamicBatching,
-                v => m_EnableDynamicBatching = v).Build();
-
-            context.AddOption("GPU Instancing",
-                () => m_EnableInstancing,
-                v => m_EnableInstancing = v).Build();
-        }
-
-        public override Runtime.RenderGraphRuntimeNode CreateRuntimeNode(NewRenderGraph graph)
-        {
-            return new Runtime.OpaquePassRuntimeNode
-            {
-                enableDynamicBatching = m_EnableDynamicBatching,
-                enableInstancing = m_EnableInstancing,
-                nextNodeIndex = GetNextNodeIndex(graph)
-            };
-        }
-    }
-
-    /// <summary>
-    /// 透明物体渲染Pass（新RenderGraph API）
-    /// </summary>
-    [Node("Transparent Pass (New API)", "RenderGraph/Passes")]
-    [UseWithGraph(typeof(NewRenderGraph))]
-    internal class TransparentPassNode : RenderGraphNode
+    [Serializable]
+    internal class RenderPassNode : RenderGraphNode
     {
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
@@ -55,78 +28,25 @@ namespace GraphToolkitTutorials.RenderGraphAPI
 
         public override Runtime.RenderGraphRuntimeNode CreateRuntimeNode(NewRenderGraph graph)
         {
-            return new Runtime.TransparentPassRuntimeNode
+            var node = new Runtime.RenderPassDataRuntimeNode
             {
                 nextNodeIndex = GetNextNodeIndex(graph)
             };
-        }
-    }
 
-    /// <summary>
-    /// 清屏Pass（新RenderGraph API）
-    /// </summary>
-    [Node("Clear Pass (New API)", "RenderGraph/Passes")]
-    [UseWithGraph(typeof(NewRenderGraph))]
-    internal class ClearPassNode : RenderGraphNode
-    {
-        [SerializeField] private Color m_ClearColor = Color.black;
-        [SerializeField] private bool m_ClearDepth = true;
-
-        protected override void OnDefinePorts(IPortDefinitionContext context)
-        {
-            AddExecutionPorts(context);
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Clear Color",
-                () => m_ClearColor,
-                v => m_ClearColor = v).Build();
-
-            context.AddOption("Clear Depth",
-                () => m_ClearDepth,
-                v => m_ClearDepth = v).Build();
-        }
-
-        public override Runtime.RenderGraphRuntimeNode CreateRuntimeNode(NewRenderGraph graph)
-        {
-            return new Runtime.ClearPassRuntimeNode
+            // 遍历 BlockNodes（注意：GetNodes() 不包含 BlockNode，必须用 BlockNodes 属性）
+            foreach (var block in BlockNodes)
             {
-                clearColor = m_ClearColor,
-                clearDepth = m_ClearDepth,
-                nextNodeIndex = GetNextNodeIndex(graph)
-            };
-        }
-    }
+                if (block is ClearBlockNode clear)
+                    node.operations.Add(clear.CreateOperation());
+                else if (block is DrawOpaqueBlockNode opaque)
+                    node.operations.Add(opaque.CreateOperation());
+                else if (block is DrawTransparentBlockNode transparent)
+                    node.operations.Add(transparent.CreateOperation());
+                else if (block is BlitBlockNode blit)
+                    node.operations.Add(blit.CreateOperation());
+            }
 
-    /// <summary>
-    /// Blit Pass（新RenderGraph API）- 用于后处理
-    /// </summary>
-    [Node("Blit Pass (New API)", "RenderGraph/Passes")]
-    [UseWithGraph(typeof(NewRenderGraph))]
-    internal class BlitPassNode : RenderGraphNode
-    {
-        [SerializeField] private Material m_Material;
-
-        protected override void OnDefinePorts(IPortDefinitionContext context)
-        {
-            AddExecutionPorts(context);
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Material",
-                () => m_Material,
-                v => m_Material = v).Build();
-        }
-
-        public override Runtime.RenderGraphRuntimeNode CreateRuntimeNode(NewRenderGraph graph)
-        {
-            return new Runtime.BlitPassRuntimeNode
-            {
-                material = m_Material,
-                nextNodeIndex = GetNextNodeIndex(graph)
-            };
+            return node;
         }
     }
 }

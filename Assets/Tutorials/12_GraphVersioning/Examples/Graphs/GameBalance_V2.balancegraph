@@ -1,0 +1,393 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 61
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 12501, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: GameBalance_V2
+  m_EditorClassIdentifier: UnityEditor.dll::Unity.GraphToolkit.Editor.Implementation.GraphObjectImp
+  m_GraphModel:
+    rid: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 1
+      type: {class: GraphModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 1234567890123456789
+          m_Value1: 9876543210987654321
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+        m_Name:
+        m_GraphNodeModels:
+        - rid: 100
+        - rid: 200
+        - rid: 300
+        - rid: 400
+        - rid: 500
+        m_GraphWireModels: []
+        m_GraphStickyNoteModels: []
+        m_GraphPlacematModels: []
+        m_GraphVariableModels: []
+        m_GraphPortalModels: []
+        m_SectionModels:
+        - rid: 2
+        m_LocalSubgraphs: []
+        m_LastKnownBounds:
+          serializedVersion: 2
+          x: -200
+          y: -400
+          width: 1200
+          height: 500
+        m_GraphElementMetaData:
+        - m_Guid:
+            m_Value0: 1000000000000000001
+            m_Value1: 1000000000000000002
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 11111111111111111111111111111111
+          m_Category: 0
+          m_Index: 0
+        - m_Guid:
+            m_Value0: 2000000000000000001
+            m_Value1: 2000000000000000002
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 22222222222222222222222222222222
+          m_Category: 0
+          m_Index: 1
+        - m_Guid:
+            m_Value0: 3000000000000000001
+            m_Value1: 3000000000000000002
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 33333333333333333333333333333333
+          m_Category: 0
+          m_Index: 2
+        - m_Guid:
+            m_Value0: 4000000000000000001
+            m_Value1: 4000000000000000002
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 44444444444444444444444444444444
+          m_Category: 0
+          m_Index: 3
+        - m_Guid:
+            m_Value0: 5000000000000000001
+            m_Value1: 5000000000000000002
+          m_HashGuid:
+            serializedVersion: 2
+            Hash: 55555555555555555555555555555555
+          m_Category: 0
+          m_Index: 4
+        m_EntryPoint:
+          rid: -2
+        m_Graph:
+          rid: 3
+    - rid: 2
+      type: {class: SectionModel, ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 3333333333333333333
+          m_Value1: 4444444444444444444
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 00000000000000000000000000000002
+        m_Version: 2
+        m_Items: []
+        m_Title:
+    - rid: 3
+      type: {class: BalanceGraph, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:
+        m_SchemaVersion: 2
+    - rid: 100
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 1000000000000000001
+          m_Value1: 1000000000000000002
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 11111111111111111111111111111111
+        m_Version: 2
+        m_Position: {x: -150, y: -350}
+        m_Title:
+        m_Tooltip:
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList:
+          - __option_Enemy Name
+          - __option_Health
+          - __option_Attack
+          - __option_Defense
+          m_ValueList:
+          - rid: 102
+          - rid: 103
+          - rid: 104
+          - rid: 105
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 101
+    - rid: 101
+      type: {class: EnemyStatsNode, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:
+    - rid: 102
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: Goblin
+    - rid: 103
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 100
+    - rid: 104
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 15
+    - rid: 105
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 5
+    - rid: 200
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 2000000000000000001
+          m_Value1: 2000000000000000002
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 22222222222222222222222222222222
+        m_Version: 2
+        m_Position: {x: -150, y: -200}
+        m_Title:
+        m_Tooltip:
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList:
+          - __option_Enemy Name
+          - __option_Health
+          - __option_Attack
+          - __option_Defense
+          m_ValueList:
+          - rid: 202
+          - rid: 203
+          - rid: 204
+          - rid: 205
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 201
+    - rid: 201
+      type: {class: EnemyStatsNode, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:
+    - rid: 202
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: Orc Warrior
+    - rid: 203
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 300
+    - rid: 204
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 25
+    - rid: 205
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 15
+    - rid: 300
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 3000000000000000001
+          m_Value1: 3000000000000000002
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 33333333333333333333333333333333
+        m_Version: 2
+        m_Position: {x: 250, y: -350}
+        m_Title:
+        m_Tooltip:
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList:
+          - __option_Weapon Name
+          - __option_Base Damage
+          - __option_Attack Speed
+          - __option_Range
+          m_ValueList:
+          - rid: 302
+          - rid: 303
+          - rid: 304
+          - rid: 305
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 301
+    - rid: 301
+      type: {class: WeaponStatsNode, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:
+    - rid: 302
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: Iron Sword
+    - rid: 303
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 20
+    - rid: 304
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1.5
+    - rid: 305
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 1.0
+    - rid: 400
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 4000000000000000001
+          m_Value1: 4000000000000000002
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 44444444444444444444444444444444
+        m_Version: 2
+        m_Position: {x: 250, y: -200}
+        m_Title:
+        m_Tooltip:
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList:
+          - __option_Weapon Name
+          - __option_Base Damage
+          - __option_Attack Speed
+          - __option_Range
+          m_ValueList:
+          - rid: 402
+          - rid: 403
+          - rid: 404
+          - rid: 405
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 401
+    - rid: 401
+      type: {class: WeaponStatsNode, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:
+    - rid: 402
+      type: {class: 'Constant`1[[System.String, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: Siege Cannon
+    - rid: 403
+      type: {class: 'Constant`1[[System.Int32, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 50
+    - rid: 404
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 0.3
+    - rid: 405
+      type: {class: 'Constant`1[[System.Single, mscorlib]]', ns: Unity.GraphToolkit.Editor, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Value: 5.0
+    - rid: 500
+      type: {class: UserNodeModelImp, ns: Unity.GraphToolkit.Editor.Implementation, asm: UnityEditor.GraphToolkitModule}
+      data:
+        m_Guid:
+          m_Value0: 5000000000000000001
+          m_Value1: 5000000000000000002
+        m_HashGuid:
+          serializedVersion: 2
+          Hash: 55555555555555555555555555555555
+        m_Version: 2
+        m_Position: {x: 650, y: -280}
+        m_Title:
+        m_Tooltip:
+        m_NodePreviewModel:
+          rid: -2
+        m_State: 0
+        m_InputConstantsById:
+          m_KeyList: []
+          m_ValueList: []
+        m_InputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_OutputPortInfos:
+          expandedPortsById:
+            m_KeyList: []
+            m_ValueList:
+        m_Collapsed: 0
+        m_CurrentModeIndex: 0
+        m_ElementColor:
+          m_Color: {r: 0, g: 0, b: 0, a: 0}
+          m_HasUserColor: 0
+        m_Node:
+          rid: 501
+    - rid: 501
+      type: {class: BalanceOutputNode, ns: GraphToolkitTutorials.GraphVersioning, asm: Unity.GraphToolkit.Tutorials.GraphVersioning.Editor}
+      data:

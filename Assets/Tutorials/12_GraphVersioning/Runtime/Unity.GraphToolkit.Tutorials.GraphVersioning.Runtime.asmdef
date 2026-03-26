@@ -1,0 +1,14 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.GraphVersioning.Runtime",
+    "rootNamespace": "GraphToolkitTutorials.GraphVersioning.Runtime",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

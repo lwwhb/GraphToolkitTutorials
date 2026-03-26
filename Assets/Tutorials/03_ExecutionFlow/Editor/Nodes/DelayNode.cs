@@ -26,10 +26,10 @@ namespace GraphToolkitTutorials.ExecutionFlow
 
             // 获取间隔时间（从输入端口或使用默认值）
             m_DurationInput.TryGetValue(out float value);
-            var duratuibPort = graph.GetConnectedOutputPort(m_DurationInput);
-            if (duratuibPort != null && duratuibPort.Direction == PortDirection.Output)
+            var durationPort = graph.GetConnectedOutputPort(m_DurationInput);
+            if (durationPort != null && durationPort.Direction == PortDirection.Output)
             {
-                var node = graph.FindNodeForPort(duratuibPort);
+                var node = graph.FindNodeForPort(durationPort);
                 if (node is IConstantNode constantNode)
                     constantNode.TryGetValue(out value);
                 else if (node is IVariableNode variableNode)

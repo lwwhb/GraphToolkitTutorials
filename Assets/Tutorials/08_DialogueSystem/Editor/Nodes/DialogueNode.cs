@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
 
 namespace GraphToolkitTutorials.DialogueSystem
@@ -32,13 +31,20 @@ namespace GraphToolkitTutorials.DialogueSystem
         public abstract Runtime.DialogueRuntimeNode CreateRuntimeNode(DialogueGraph graph);
 
         /// <summary>
-        /// 获取节点在图形中的索引
+        /// 获取节点在图形中的索引。
+        /// 注意：只计数 DialogueNode 实例，与 DialogueImporter 的过滤逻辑保持一致。
         /// </summary>
         public int GetNodeIndex(DialogueGraph graph)
         {
-            var allNodes = new List<INode>(graph.GetNodes());
-            for (int i = 0; i < allNodes.Count; i++)
-                if (allNodes[i] == this) return i;
+            int idx = 0;
+            foreach (var node in graph.GetNodes())
+            {
+                if (node is DialogueNode)
+                {
+                    if (node == this) return idx;
+                    idx++;
+                }
+            }
             return -1;
         }
     }

@@ -1,0 +1,19 @@
+{
+    "name": "Unity.GraphToolkit.Tutorials.GraphVersioning.Editor",
+    "rootNamespace": "GraphToolkitTutorials.GraphVersioning",
+    "references": [
+        "Unity.GraphToolkit.Editor",
+        "Unity.GraphToolkit.Tutorials.GraphVersioning.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

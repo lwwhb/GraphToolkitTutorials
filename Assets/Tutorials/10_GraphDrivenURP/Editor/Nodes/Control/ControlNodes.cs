@@ -1,24 +1,24 @@
+using System;
+using System.Collections.Generic;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
 namespace GraphToolkitTutorials.GraphDrivenURP
 {
     /// <summary>
-    /// 条件分支节点 - 根据质量设置选择不同的渲染路径
+    /// 质量分支节点 — 根据当前质量等级选择不同渲染路径。
+    /// 教学重点：
+    ///   • 分支节点有两个输出端口（High Quality / Low Quality），无执行输出端口
+    ///   • GetHighQualityNode / GetLowQualityNode 用 graph.FindNodeForPort 查找目标节点
+    ///   • 在 RecordRenderGraph 中通过 QualitySettings.GetQualityLevel() 实时决策
     /// </summary>
-    [Node("Quality Branch", "URP/Control", Color = "#F39C12")]
+    [Node("Control", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class QualityBranchNode : URPNode
     {
-        public enum QualityLevel
-        {
-            Low,
-            Medium,
-            High
-        }
-
-        [SerializeField]
-        private QualityLevel m_MinimumQuality = QualityLevel.Medium;
+        // int 不支持 AddOption getter/setter 形式，改用 INodeOption + TryGetValue
+        private INodeOption m_MinQualityOption;
 
         private IPort m_HighQualityPort;
         private IPort m_LowQualityPort;
@@ -38,53 +38,53 @@ namespace GraphToolkitTutorials.GraphDrivenURP
                 .Build();
         }
 
-        public URPNode GetHighQualityNode(URPGraph graph)
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        {
+            m_MinQualityOption = context.AddOption<int>("Min Quality For High").Build();
+        }
+
+        private URPNode GetHighQualityNode(URPGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_HighQualityPort);
-            if (connectedPort != null && connectedPort.Node is URPNode urpNode)
-            {
-                return urpNode;
-            }
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is URPNode n)
+                return n;
             return null;
         }
 
-        public URPNode GetLowQualityNode(URPGraph graph)
+        private URPNode GetLowQualityNode(URPGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_LowQualityPort);
-            if (connectedPort != null && connectedPort.Node is URPNode urpNode)
-            {
-                return urpNode;
-            }
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is URPNode n)
+                return n;
             return null;
         }
 
         public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
         {
-            var runtimeNode = new Runtime.QualityBranchNode
+            int minQuality = 2;
+            m_MinQualityOption?.TryGetValue(out minQuality);
+            minQuality = Mathf.Clamp(minQuality, 0, 5);
+
+            var highNode = GetHighQualityNode(graph);
+            var lowNode  = GetLowQualityNode(graph);
+            return new Runtime.QualityBranchNode
             {
-                minimumQuality = (int)m_MinimumQuality
+                minimumQualityForHigh = minQuality,
+                highQualityIndex      = highNode != null ? highNode.GetNodeIndex(graph) : -1,
+                lowQualityIndex       = lowNode  != null ? lowNode.GetNodeIndex(graph)  : -1
             };
-
-            var highQualityNode = GetHighQualityNode(graph);
-            runtimeNode.highQualityIndex = highQualityNode != null ? highQualityNode.GetNodeIndex(graph) : -1;
-
-            var lowQualityNode = GetLowQualityNode(graph);
-            runtimeNode.lowQualityIndex = lowQualityNode != null ? lowQualityNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Minimum Quality", () => m_MinimumQuality, v => m_MinimumQuality = v).Build();
         }
     }
 
     /// <summary>
-    /// 平台分支节点 - 根据平台选择不同的渲染路径
+    /// 平台分支节点 — 根据运行平台选择不同渲染路径。
+    /// 教学重点：
+    ///   • PC 路径 / Mobile 路径各有独立输出端口
+    ///   • 在 RecordRenderGraph 中通过 Application.isMobilePlatform 实时决策
     /// </summary>
-    [Node("Platform Branch", "URP/Control", Color = "#16A085")]
+    [Node("Control", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class PlatformBranchNode : URPNode
     {
         private IPort m_PCPort;
@@ -105,37 +105,31 @@ namespace GraphToolkitTutorials.GraphDrivenURP
                 .Build();
         }
 
-        public URPNode GetPCNode(URPGraph graph)
+        private URPNode GetPCNode(URPGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_PCPort);
-            if (connectedPort != null && connectedPort.Node is URPNode urpNode)
-            {
-                return urpNode;
-            }
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is URPNode n)
+                return n;
             return null;
         }
 
-        public URPNode GetMobileNode(URPGraph graph)
+        private URPNode GetMobileNode(URPGraph graph)
         {
             var connectedPort = graph.GetConnectedInputPort(m_MobilePort);
-            if (connectedPort != null && connectedPort.Node is URPNode urpNode)
-            {
-                return urpNode;
-            }
+            if (connectedPort != null && graph.FindNodeForPort(connectedPort) is URPNode n)
+                return n;
             return null;
         }
 
         public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
         {
-            var runtimeNode = new Runtime.PlatformBranchNode();
-
-            var pcNode = GetPCNode(graph);
-            runtimeNode.pcIndex = pcNode != null ? pcNode.GetNodeIndex(graph) : -1;
-
+            var pcNode     = GetPCNode(graph);
             var mobileNode = GetMobileNode(graph);
-            runtimeNode.mobileIndex = mobileNode != null ? mobileNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
+            return new Runtime.PlatformBranchNode
+            {
+                pcIndex     = pcNode     != null ? pcNode.GetNodeIndex(graph)     : -1,
+                mobileIndex = mobileNode != null ? mobileNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 }

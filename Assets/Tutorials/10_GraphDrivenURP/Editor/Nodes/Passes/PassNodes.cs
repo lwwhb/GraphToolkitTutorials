@@ -1,3 +1,4 @@
+using System;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -5,150 +6,135 @@ using UnityEngine.Rendering.Universal;
 namespace GraphToolkitTutorials.GraphDrivenURP
 {
     /// <summary>
-    /// 不透明Pass节点
+    /// 不透明 Pass 节点。
+    /// 教学重点：
+    ///   • 纯执行流节点：只有 In/Out 执行端口，无数据端口
+    ///   • 运行时对应 RecordRenderGraph 中的 DrawRendererList（不透明队列）
+    ///   • 选项使用 INodeOption + TryGetValue（AddOption getter/setter 形式不被支持）
     /// </summary>
-    [Node("Opaque Pass", "URP/Passes", Color = "#4A90D9")]
+    [Node("Passes", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class OpaquePassNode : URPNode
     {
-        [SerializeField]
-        private LayerMask m_LayerMask = -1;
-
-        [SerializeField]
-        private bool m_EnableDynamicBatching = true;
+        private INodeOption m_LayerMaskOption;
+        private INodeOption m_PassEventOption;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddExecutionPorts(context);
-            context.AddOutputPort<RenderTexture>("Color").Build();
-            context.AddOutputPort<RenderTexture>("Depth").Build();
-        }
-
-        public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
-        {
-            var runtimeNode = new Runtime.OpaquePassNode
-            {
-                layerMask = m_LayerMask,
-                enableDynamicBatching = m_EnableDynamicBatching
-            };
-
-            var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Layer Mask", () => m_LayerMask, v => m_LayerMask = v).Build();
-            context.AddOption("Dynamic Batching", () => m_EnableDynamicBatching, v => m_EnableDynamicBatching = v).Build();
+            m_LayerMaskOption = context.AddOption<LayerMask>("Layer Mask").Build();
+            m_PassEventOption = context.AddOption<RenderPassEvent>("Pass Event").Build();
+        }
+
+        public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
+        {
+            LayerMask layerMask = -1;
+            m_LayerMaskOption?.TryGetValue(out layerMask);
+
+            RenderPassEvent passEvent = RenderPassEvent.AfterRenderingOpaques;
+            m_PassEventOption?.TryGetValue(out passEvent);
+
+            var nextNode = GetNextNode(graph);
+            return new Runtime.OpaquePassNode
+            {
+                layerMask     = layerMask,
+                passEvent     = passEvent,
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 透明Pass节点
+    /// 透明 Pass 节点。
+    /// 运行时对应 RecordRenderGraph 中的 DrawRendererList（透明队列）。
     /// </summary>
-    [Node("Transparent Pass", "URP/Passes", Color = "#7EC8E3")]
+    [Node("Passes", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class TransparentPassNode : URPNode
     {
-        [SerializeField]
-        private LayerMask m_LayerMask = -1;
-
-        private IPort m_ColorInput;
-        private IPort m_DepthInput;
+        private INodeOption m_LayerMaskOption;
+        private INodeOption m_PassEventOption;
 
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddExecutionPorts(context);
-            m_ColorInput = context.AddInputPort<RenderTexture>("Color In").Build();
-            m_DepthInput = context.AddInputPort<RenderTexture>("Depth In").Build();
-            context.AddOutputPort<RenderTexture>("Color Out").Build();
-        }
-
-        public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
-        {
-            var runtimeNode = new Runtime.TransparentPassNode
-            {
-                layerMask = m_LayerMask
-            };
-
-            var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
         }
 
         protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            context.AddOption("Layer Mask", () => m_LayerMask, v => m_LayerMask = v).Build();
+            m_LayerMaskOption = context.AddOption<LayerMask>("Layer Mask").Build();
+            m_PassEventOption = context.AddOption<RenderPassEvent>("Pass Event").Build();
+        }
+
+        public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
+        {
+            LayerMask layerMask = -1;
+            m_LayerMaskOption?.TryGetValue(out layerMask);
+
+            RenderPassEvent passEvent = RenderPassEvent.AfterRenderingTransparents;
+            m_PassEventOption?.TryGetValue(out passEvent);
+
+            var nextNode = GetNextNode(graph);
+            return new Runtime.TransparentPassNode
+            {
+                layerMask     = layerMask,
+                passEvent     = passEvent,
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 阴影Pass节点
+    /// 阴影 Pass 节点（标记节点）。
+    /// URP 内部管理阴影渲染，此节点在 RecordRenderGraph 中作为概念占位符。
     /// </summary>
-    [Node("Shadow Pass", "URP/Passes", Color = "#555555")]
+    [Node("Passes", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class ShadowPassNode : URPNode
     {
-        [SerializeField]
-        private int m_ShadowResolution = 1024;
-
-        [SerializeField]
-        private int m_CascadeCount = 4;
-
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddExecutionPorts(context);
-            context.AddOutputPort<RenderTexture>("Shadow Map").Build();
         }
 
         public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
         {
-            var runtimeNode = new Runtime.ShadowPassNode
-            {
-                shadowResolution = m_ShadowResolution,
-                cascadeCount = m_CascadeCount
-            };
-
             var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption("Shadow Resolution", () => m_ShadowResolution, v => m_ShadowResolution = Mathf.Max(128, v)).Build();
-            context.AddOption("Cascade Count", () => m_CascadeCount, v => m_CascadeCount = Mathf.Clamp(v, 1, 4)).Build();
+            return new Runtime.ShadowPassNode
+            {
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 
     /// <summary>
-    /// 天空盒Pass节点
+    /// 天空盒 Pass 节点（标记节点）。
+    /// URP 内部管理天空盒渲染，此节点在 RecordRenderGraph 中作为概念占位符。
     /// </summary>
-    [Node("Skybox Pass", "URP/Passes", Color = "#87CEEB")]
+    [Node("Passes", "")]
     [UseWithGraph(typeof(URPGraph))]
+    [Serializable]
     internal class SkyboxPassNode : URPNode
     {
-        private IPort m_ColorInput;
-
         protected override void OnDefinePorts(IPortDefinitionContext context)
         {
             AddExecutionPorts(context);
-            m_ColorInput = context.AddInputPort<RenderTexture>("Color In").Build();
-            context.AddOutputPort<RenderTexture>("Color Out").Build();
         }
 
         public override Runtime.URPRuntimeNode CreateRuntimeNode(URPGraph graph)
         {
-            var runtimeNode = new Runtime.SkyboxPassNode();
-
             var nextNode = GetNextNode(graph);
-            runtimeNode.nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1;
-
-            return runtimeNode;
+            return new Runtime.SkyboxPassNode
+            {
+                nextNodeIndex = nextNode != null ? nextNode.GetNodeIndex(graph) : -1
+            };
         }
     }
 }
